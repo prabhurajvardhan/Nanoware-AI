@@ -1,0 +1,40 @@
+{
+  "entities": {
+    "ContactRequest": {
+      "title": "Contact Request",
+      "description": "A submission from the contact form.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "company": { "type": "string" },
+        "projectType": { "type": "string" },
+        "budget": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "reviewed", "archived"] },
+        "createdAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["name", "email", "company", "projectType", "budget", "description", "status", "createdAt"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "An administrator user with access to view requests.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "createdAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["email", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/requests/{requestId}": {
+      "schema": { "$ref": "#/entities/ContactRequest" },
+      "description": "Stores user submitted contact requests."
+    },
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/Admin" },
+      "description": "Stores admin privileges mapping."
+    }
+  }
+}

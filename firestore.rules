@@ -6,16 +6,90 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Helper functions
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // Models validation
+    function isValidProject(data) {
+      return data.keys().hasAll(['userId', 'name', 'status', 'createdAt']) &&
+        data.keys().size() == 4 && // exact keys
+        data.userId is string && data.userId.size() <= 128 && data.userId == request.auth.uid &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+        data.status is string && data.status in ['active', 'completed'] &&
+        data.createdAt == request.time;
+    }
+
+    function isValidProjectUpdate(data) {
+      // client can't really update project status or name, only admin
+      return false; // let admin do it
+    }
+
+    function isValidProjectStep(data) {
+      return data.keys().hasAll(['stepName', 'description', 'status', 'order', 'createdAt']) &&
+        data.keys().size() >= 5 && data.keys().size() <= 6 &&
+        data.stepName is string && data.stepName.size() <= 100 &&
+        data.description is string && data.description.size() <= 1000 &&
+        data.status in ['pending', 'in-progress', 'completed'] &&
+        data.order is number &&
+        data.createdAt == request.time &&
+        (!data.keys().hasAny(['previewLink']) || (data.previewLink is string && data.previewLink.size() <= 500));
+    }
+
+    function isValidActivityLog(data) {
+      return data.keys().hasAll(['projectId', 'message', 'createdAt']) &&
+        data.keys().size() == 3 &&
+        data.projectId is string && data.projectId.size() <= 128 &&
+        data.message is string && data.message.size() <= 500 &&
+        data.createdAt == request.time;
+    }
+
     match /requests/{requestId} {
-      // Anyone can submit a request (anonymously)
       allow create: if true;
-      // In a real scenario, use exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-      allow read, update, delete: if true; 
+      allow read, update, delete: if isAdmin();
     }
 
     match /admins/{userId} {
-      allow read: if request.auth != null;
+      allow read: if isSignedIn();
       allow write: if false;
+    }
+
+    match /projects/{projectId} {
+      // A client can only create a project if they set themselves as userId
+      allow create: if isSignedIn() && isValidProject(incoming());
+      
+      // Client can read their own projects. Admin can read all.
+      allow get: if isSignedIn() && isValidId(projectId) && 
+        (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Updates and deletes restricted to admins
+      allow update, delete: if isAdmin();
+
+      match /steps/{stepId} {
+        // Steps are generally created/updated by Admins
+        allow create, update, delete: if isAdmin();
+        
+        // To read steps, the user must either be admin or own the project.
+        allow read: if isSignedIn() && isValidId(stepId) && isValidId(projectId) && (
+          isAdmin() ||
+          get(/databases/$(database)/documents/projects/$(projectId)).data.userId == request.auth.uid
+        );
+      }
+
+      match /activities/{activityId} {
+        // Activities can be created by the system/admin
+        allow create, update, delete: if isAdmin();
+        
+        // Same read condition as steps
+        allow read: if isSignedIn() && isValidId(activityId) && isValidId(projectId) && (
+          isAdmin() ||
+          get(/databases/$(database)/documents/projects/$(projectId)).data.userId == request.auth.uid
+        );
+      }
     }
   }
 }

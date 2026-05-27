@@ -10,10 +10,13 @@ function Network() {
 
   // Generate random points in a sphere
   const [positions, linesData] = useMemo(() => {
-    const pos = [];
+    const pos: THREE.Vector3[] = [];
     for (let i = 0; i < particleCount; i++) {
+        // eslint-disable-next-line react-hooks/purity
         const r = 2.5 * Math.cbrt(Math.random());
+        // eslint-disable-next-line react-hooks/purity
         const theta = Math.random() * 2 * Math.PI;
+        // eslint-disable-next-line react-hooks/purity
         const phi = Math.acos(2 * Math.random() - 1);
         pos.push(new THREE.Vector3(
           r * Math.sin(phi) * Math.cos(theta),
@@ -65,6 +68,7 @@ function Network() {
             count={positions.length / 3}
             array={positions}
             itemSize={3}
+            args={[positions, 3]}
           />
         </bufferGeometry>
         <pointsMaterial size={0.04} color="#0F172A" opacity={0.6} transparent sizeAttenuation />
@@ -77,6 +81,7 @@ function Network() {
             count={linesData.length / 3}
             array={linesData}
             itemSize={3}
+            args={[linesData, 3]}
           />
         </bufferGeometry>
         <lineBasicMaterial color="#C6A15B" opacity={0.15} transparent linewidth={1} />

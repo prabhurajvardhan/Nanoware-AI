@@ -40,12 +40,12 @@ export default function About() {
                   <h3 className="font-heading text-2xl font-medium mb-8">What our Partners Say</h3>
                   <div className="space-y-8">
                      <div className="border-b border-slate-800 pb-8">
-                        <p className="italic text-slate-300 leading-relaxed mb-4">"Nanoware AI isn't just implementing AI, they are fundamentally altering how we perceive system architecture. Their deployments are staggeringly efficient."</p>
+                        <p className="italic text-slate-300 leading-relaxed mb-4">&quot;Nanoware AI isn&apos;t just implementing AI, they are fundamentally altering how we perceive system architecture. Their deployments are staggeringly efficient.&quot;</p>
                         <p className="text-sm font-medium text-white">Dr. Aris Thorne</p>
                         <p className="text-xs text-slate-500">Director of Research, TechNova Group</p>
                      </div>
                      <div>
-                        <p className="italic text-slate-300 leading-relaxed mb-4">"The reliability of their multi-agent testing system reduced our deployment hallucinations by 98%."</p>
+                        <p className="italic text-slate-300 leading-relaxed mb-4">&quot;The reliability of their multi-agent testing system reduced our deployment hallucinations by 98%.&quot;</p>
                         <p className="text-sm font-medium text-white">Elena Rostova</p>
                         <p className="text-xs text-slate-500">CTO, IntelliCore Systems</p>
                      </div>

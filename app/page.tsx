@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import NeuronNetwork from '@/components/NeuronNetwork';
 import ProjectNetwork from '@/components/ProjectNetwork';
+import ServiceChain from '@/components/ServiceChain';
 import { PageTransition } from '@/components/PageTransition';
 
 export default function Home() {
@@ -20,11 +21,11 @@ export default function Home() {
                  <span className="text-brand-accent font-heading font-medium tracking-widest text-sm uppercase">Nanoware AI</span>
               </div>
               <h1 className="font-heading text-5xl md:text-7xl lg:text-[5rem] font-medium tracking-tight text-brand-secondary leading-[1.05]">
-                Beyond Algorithms.<br />
-                <span className="text-brand-accent italic font-serif">Toward Intelligence.</span>
+                Build • Automate •<br />
+                <span className="text-brand-accent italic font-serif">Launch Faster</span>
               </h1>
               <p className="text-lg md:text-xl text-slate-500 font-sans leading-relaxed max-w-lg mt-2">
-                We build self-evolving systems with novel neuron architectures, pushing the boundaries of what artificial intelligence can become.
+                We create websites, intelligent automations, AI workflows and digital systems that help businesses and creators move faster with less manual work.
               </p>
               
               <div className="flex flex-col sm:flex-row items-center gap-4 pt-6">
@@ -38,10 +39,10 @@ export default function Home() {
                   </svg>
                 </Link>
                 <Link 
-                  href="/research"
+                  href="/projects"
                   className="w-full sm:w-auto bg-white border border-slate-200 text-brand-secondary px-8 py-4 rounded-full text-sm tracking-wide font-medium hover:border-slate-300 hover:bg-slate-50 transition-all flex items-center justify-center gap-3"
                 >
-                  Explore Research
+                  Explore Our Work
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M7 1v12M13 7l-6 6-6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="transform -rotate-90 origin-center"/>
                   </svg>
@@ -54,8 +55,8 @@ export default function Home() {
                  <div className="w-8 h-8 flex items-center justify-center border border-brand-accent/30 rounded-md mb-6">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6A15B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                  </div>
-                 <h3 className="font-heading font-medium text-brand-secondary mb-2">Our Vision</h3>
-                 <p className="text-sm text-slate-500 leading-relaxed">To create intelligence that is autonomous, adaptive, and aligned with the real world.</p>
+                 <h3 className="font-heading font-medium text-brand-secondary mb-2">Our Mission</h3>
+                 <p className="text-sm text-slate-500 leading-relaxed">To engineer digital systems and intelligent automations that accelerate business growth and reduce operational friction.</p>
               </div>
             </div>
          </div>
@@ -76,77 +77,125 @@ export default function Home() {
               <span className="text-brand-accent font-heading font-medium tracking-widest text-sm uppercase">Active Network</span>
            </div>
            <h2 className="font-heading text-4xl md:text-5xl font-medium tracking-tight text-brand-secondary">
-             Ecosystem <span className="text-brand-accent italic font-serif">Topology.</span>
+             Test Our <span className="text-brand-accent italic font-serif">Work.</span>
            </h2>
            <p className="text-slate-500 max-w-xl mt-4 font-sans text-sm md:text-base leading-relaxed">
-             Our ventures form a cohesive digital nervous system. Interact with the nodes below to explore the current state of our intelligence deployment.
+             Explore real demos of websites, automations and AI systems built by NanoWare.
            </p>
         </div>
         
         <ProjectNetwork />
       </section>
 
-      {/* Feature Section */}
+      {/* Services Section */}
+      <ServiceChain />
+
+      {/* Why Nanoware AI Section */}
       <section className="py-32 bg-brand-secondary text-white px-6 md:px-12">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 border-b border-brand-accent/20 pb-24">
-            <div className="flex flex-col gap-4">
-               <div className="text-brand-accent mb-2">
-                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-               </div>
-               <h3 className="font-heading font-medium text-xl shadow-sm tracking-tight text-white/90">Novel Neuron Architecture</h3>
-               <p className="text-slate-400 text-sm leading-relaxed">Built from scratch in Rust. Efficient, scalable, and biologically inspired.</p>
+        <div className="max-w-7xl mx-auto flex flex-col gap-24">
+          
+          {/* Header */}
+          <div className="flex flex-col md:flex-row justify-between items-start gap-12">
+            <div className="max-w-2xl">
+              <h2 className="font-heading text-4xl md:text-5xl lg:text-6xl font-medium tracking-tight text-white mb-6">
+                Built for speed.<br />
+                <span className="text-white/60">Designed for execution.</span>
+              </h2>
+              <p className="text-slate-400 text-lg md:text-xl font-sans max-w-xl leading-relaxed">
+                From idea to production without unnecessary complexity.
+              </p>
             </div>
-            <div className="flex flex-col gap-4">
-               <div className="text-brand-accent mb-2">
-                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-               </div>
-               <h3 className="font-heading font-medium text-xl shadow-sm tracking-tight text-white/90">Intelligence System</h3>
-               <p className="text-slate-400 text-sm leading-relaxed">Self-evolving system that learns, adapts, and improves autonomously.</p>
-            </div>
-            <div className="flex flex-col gap-4">
-               <div className="text-brand-accent mb-2">
-                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"></polygon><line x1="12" y1="22" x2="12" y2="15.5"></line><polyline points="22 8.5 12 15.5 2 8.5"></polyline><polyline points="2 15.5 12 8.5 22 15.5"></polyline><line x1="12" y1="2" x2="12" y2="8.5"></line></svg>
-               </div>
-               <h3 className="font-heading font-medium text-xl shadow-sm tracking-tight text-white/90">Real World Impact</h3>
-               <p className="text-slate-400 text-sm leading-relaxed">From experiments to deployments — creating measurable change.</p>
-            </div>
-            <div className="flex flex-col gap-4">
-               <div className="text-brand-accent mb-2">
-                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="7.5 4.21 12 6.81 16.5 4.21"></polyline><polyline points="7.5 19.79 7.5 14.6 3 12"></polyline><polyline points="21 12 16.5 14.6 16.5 19.79"></polyline><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-               </div>
-               <h3 className="font-heading font-medium text-xl shadow-sm tracking-tight text-white/90">AI Solutions & Services</h3>
-               <p className="text-slate-400 text-sm leading-relaxed">Custom AI applications, web solutions, and intelligent automation.</p>
-            </div>
-        </div>
-        
-        <div className="max-w-7xl mx-auto pt-24 flex flex-col md:flex-row justify-between items-start md:items-center gap-12">
-           <div className="flex gap-16 flex-wrap">
-              <div>
-                 <p className="font-heading text-4xl lg:text-5xl font-medium mb-3 text-white/90">12+</p>
-                 <p className="text-slate-400 text-sm tracking-widest uppercase">Projects</p>
-              </div>
-              <div>
-                 <p className="font-heading text-4xl lg:text-5xl font-medium mb-3 text-white/90">3</p>
-                 <p className="text-slate-400 text-sm tracking-widest uppercase">Core Systems</p>
-              </div>
-              <div>
-                 <p className="font-heading text-4xl lg:text-5xl font-medium mb-3 text-white/90">10K+</p>
-                 <p className="text-slate-400 text-sm tracking-widest uppercase">Experiments</p>
-              </div>
-              <div>
-                 <p className="font-heading text-4xl lg:text-5xl font-medium mb-3 text-white/90">∞</p>
-                 <p className="text-slate-400 text-sm tracking-widest uppercase">Possibilities</p>
-              </div>
-           </div>
-           
-           <Link href="/about" className="inline-flex items-center gap-3 text-sm tracking-wide font-medium text-white hover:text-brand-accent transition-colors border px-6 py-3 rounded-full border-slate-700 hover:border-brand-accent">
-              View Achievements
+            <Link href="/contact" className="hidden md:inline-flex items-center gap-3 text-sm tracking-wide font-medium bg-white text-brand-secondary hover:bg-slate-200 transition-colors px-8 py-4 rounded-full shadow-lg">
+              Get Free Consultation
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M1 7h12M7 1l6 6-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-           </Link>
+            </Link>
+          </div>
+
+          {/* Pillars */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="glass bg-slate-800/50 backdrop-blur-md border border-slate-700/50 p-8 rounded-3xl">
+              <div className="w-12 h-12 bg-slate-800 rounded-2xl flex items-center justify-center text-brand-accent mb-6 border border-slate-700">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+              </div>
+              <h3 className="text-xl font-heading font-medium text-white mb-3">Fast Delivery</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">Rapid prototypes and fast launches.</p>
+            </div>
+            
+            <div className="glass bg-slate-800/50 backdrop-blur-md border border-slate-700/50 p-8 rounded-3xl">
+              <div className="w-12 h-12 bg-slate-800 rounded-2xl flex items-center justify-center text-brand-accent mb-6 border border-slate-700">
+                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+              </div>
+              <h3 className="text-xl font-heading font-medium text-white mb-3">Intelligent Systems</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">Built for your workflow and goals.</p>
+            </div>
+            
+            <div className="glass bg-slate-800/50 backdrop-blur-md border border-slate-700/50 p-8 rounded-3xl">
+              <div className="w-12 h-12 bg-slate-800 rounded-2xl flex items-center justify-center text-brand-accent mb-6 border border-slate-700">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              </div>
+              <h3 className="text-xl font-heading font-medium text-white mb-3">Managed Infrastructure</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">We maintain deployment and operations.</p>
+            </div>
+          </div>
+
+          {/* Process Timeline */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 md:p-12">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-6">
+               <h3 className="text-2xl font-heading font-medium text-white">The Live-Build Process</h3>
+               <div className="flex items-center gap-3 bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700">
+                 <span className="w-2 h-2 rounded-full bg-brand-accent animate-pulse"></span>
+                 <span className="text-xs font-medium uppercase tracking-wider text-slate-300">Track your project in real-time through your dashboard</span>
+               </div>
+            </div>
+            
+            {/* Timeline UI */}
+            <div className="relative">
+               {/* Vertical line for mobile, horizontal line for desktop */}
+               <div className="absolute left-[1.15rem] md:left-0 top-0 bottom-0 md:bottom-auto w-px height-full md:h-px md:w-full bg-slate-800 md:top-6 -z-10"></div>
+               
+               <div className="flex flex-col md:flex-row justify-between gap-12 md:gap-4 lg:gap-8">
+                  {[
+                    { id: '01', title: 'Discovery', desc: 'Requirements gathered' },
+                    { id: '02', title: 'Planning', desc: 'Architecture defined' },
+                    { id: '03', title: 'Build', desc: 'UX/UI & structures' },
+                    { id: '04', title: 'Live Preview', desc: 'Watch us build' },
+                    { id: '05', title: 'Launch', desc: 'Push to production' }
+                  ].map((step, idx) => (
+                     <div key={idx} className="relative flex md:flex-col items-start md:items-center gap-6 md:gap-4 md:text-center w-full group">
+                        <div className="bg-slate-900 w-10 h-10 rounded-full border-2 border-slate-700 flex items-center justify-center z-10 shrink-0 text-slate-500 font-mono text-sm group-hover:border-brand-accent group-hover:text-brand-accent transition-colors">
+                          {step.id}
+                        </div>
+                        <div>
+                          <h4 className="font-heading font-medium text-white mb-1">{step.title}</h4>
+                          <p className="text-xs text-slate-500 hidden md:block">{step.desc}</p>
+                        </div>
+                     </div>
+                  ))}
+               </div>
+            </div>
+          </div>
+
+          <div className="md:hidden flex justify-center">
+            <Link href="/contact" className="inline-flex w-full justify-center items-center gap-3 text-sm tracking-wide font-medium bg-white text-brand-secondary hover:bg-slate-200 transition-colors px-8 py-4 rounded-full shadow-lg">
+              Get Free Consultation
+            </Link>
+          </div>
+
         </div>
       </section>
+
+      {/* Mobile Sticky CTA */}
+      <div className="md:hidden fixed bottom-6 left-6 right-6 z-50 pointer-events-none">
+        <Link href="/contact" className="pointer-events-auto flex w-full justify-center items-center gap-3 text-sm tracking-wide font-medium bg-brand-secondary text-white hover:bg-slate-800 transition-all px-8 py-4 rounded-full shadow-[0_8px_30px_rgba(15,23,42,0.3)] border border-brand-secondary/50">
+          Request a Solution
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M1 7h12M7 1l6 6-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </Link>
+      </div>
+
     </PageTransition>
   );
 }

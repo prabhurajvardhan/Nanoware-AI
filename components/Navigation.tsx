@@ -7,21 +7,22 @@ import { Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { Logo } from './Logo';
+import { useAuth } from '@/components/AuthProvider';
 
 const navLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/research', label: 'Research' },
   { href: '/services', label: 'Services' },
-  { href: '/system', label: 'Intelligence System' },
-  { href: '/projects', label: 'Projects' },
+  { href: '/projects', label: 'Work' },
+  { href: '/process', label: 'Process' },
+  { href: '/research', label: 'Research' },
   { href: '/about', label: 'About' },
-  { href: '/updates', label: 'Updates' },
+  { href: '/contact', label: 'Contact' },
 ];
 
 export function Navigation() {
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -69,7 +70,22 @@ export function Navigation() {
             ))}
           </nav>
 
-          <div className="hidden lg:flex items-center">
+          <div className="hidden lg:flex items-center gap-4">
+            {user ? (
+              <Link 
+                href="/dashboard"
+                className="text-sm font-medium text-brand-secondary hover:text-brand-accent transition-colors"
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <Link 
+                href="/login"
+                className="text-sm font-medium text-slate-500 hover:text-brand-secondary transition-colors"
+              >
+                Client Portal
+              </Link>
+            )}
             <Link 
               href="/contact"
               className="bg-brand-secondary text-white px-6 py-2.5 rounded-full text-sm font-medium hover:bg-slate-800 transition-colors flex items-center gap-2 shadow-[0_4px_14px_0_rgba(15,23,42,0.15)] hover:shadow-[0_6px_20px_rgba(15,23,42,0.23)]"
@@ -124,7 +140,24 @@ export function Navigation() {
                   {link.label}
                 </Link>
               ))}
-              <div className="pt-8 border-t border-slate-100">
+              <div className="pt-8 flex flex-col gap-6 border-t border-slate-100">
+                {user ? (
+                  <Link
+                     href="/dashboard"
+                     onClick={() => setMobileMenuOpen(false)}
+                     className="text-brand-secondary hover:text-brand-accent transition-colors block"
+                  >
+                    Dashboard
+                  </Link>
+                ) : (
+                  <Link
+                     href="/login"
+                     onClick={() => setMobileMenuOpen(false)}
+                     className="text-brand-secondary hover:text-brand-accent transition-colors block"
+                  >
+                    Client Portal
+                  </Link>
+                )}
                 <Link
                    href="/contact"
                    onClick={() => setMobileMenuOpen(false)}

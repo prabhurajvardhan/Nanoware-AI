@@ -25,6 +25,43 @@
         "createdAt": { "type": "string", "format": "timestamp" }
       },
       "required": ["email", "createdAt"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "A project belonging to a client.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "completed"] },
+        "createdAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["userId", "name", "status", "createdAt"]
+    },
+    "ProjectStep": {
+      "title": "Project Step",
+      "description": "A step within a project timeline.",
+      "type": "object",
+      "properties": {
+        "stepName": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "in-progress", "completed"] },
+        "previewLink": { "type": "string" },
+        "order": { "type": "number" },
+        "createdAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["stepName", "description", "status", "order", "createdAt"]
+    },
+    "ActivityLog": {
+      "title": "Activity Log",
+      "description": "Activity updates for a project.",
+      "type": "object",
+      "properties": {
+        "projectId": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["projectId", "message", "createdAt"]
     }
   },
   "firestore": {
@@ -35,6 +72,18 @@
     "/admins/{userId}": {
       "schema": { "$ref": "#/entities/Admin" },
       "description": "Stores admin privileges mapping."
+    },
+    "/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/Project" },
+      "description": "Stores client projects."
+    },
+    "/projects/{projectId}/steps/{stepId}": {
+      "schema": { "$ref": "#/entities/ProjectStep" },
+      "description": "Stores steps or stages for a project."
+    },
+    "/projects/{projectId}/activities/{activityId}": {
+      "schema": { "$ref": "#/entities/ActivityLog" },
+      "description": "Activity feed for the project."
     }
   }
 }

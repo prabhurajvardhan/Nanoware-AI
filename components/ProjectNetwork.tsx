@@ -9,39 +9,44 @@ import Link from 'next/link';
 
 const projects = [
   {
-    id: 'promptersera',
-    name: 'PromptersEra',
-    desc: 'Academic-to-industry pipeline for prompt engineering.',
-    tags: ['Education', 'Skill Validation', 'Pipeline'],
+    id: 'lead-intelligence',
+    name: 'Lead Intelligence Agent',
+    desc: 'Analyze companies and generate business insights.',
+    tags: ['Sales Agent', 'Data Intelligence', 'Automation'],
     position: [-2.5, 1.2, 0.5] as [number, number, number],
+    buttonText: 'Try Demo'
   },
   {
-    id: 'greene-ai',
-    name: 'The Greene AI',
-    desc: 'Next-generation AI content + interaction platform.',
-    tags: ['Content', 'AI Personalities', 'Entertainment'],
+    id: 'outreach-assistant',
+    name: 'AI Outreach Assistant',
+    desc: 'Generate personalized outreach automatically.',
+    tags: ['Personalization', 'Email Agent', 'Copywriting'],
     position: [2.2, 1.5, -0.8] as [number, number, number],
+    buttonText: 'Try Demo'
   },
   {
-    id: 'clutchoutclear',
-    name: 'ClutchOutClear',
-    desc: 'Agentic AI news intelligence platform.',
-    tags: ['News Intelligence', 'Agentic Workflow', 'RAG'],
+    id: 'client-dashboard',
+    name: 'Client Dashboard',
+    desc: 'Track project progress in real time.',
+    tags: ['Next.js', 'Firebase', 'Real-time sync'],
     position: [-1.8, -1.5, 1.2] as [number, number, number],
+    buttonText: 'Open Demo'
   },
   {
-    id: 'nostalgia-ai',
-    name: 'The Nostalgia AI',
-    desc: 'Social gaming platform for reliving childhood games with AI.',
-    tags: ['Social Gaming', 'Emotional AI', 'Nostalgia'],
+    id: 'website-builder',
+    name: 'Website Builder',
+    desc: 'Launch modern landing pages rapidly.',
+    tags: ['Web Design', 'UI Frameworks', 'Tailwind CSS'],
     position: [2.4, -1.2, 0.2] as [number, number, number],
+    buttonText: 'View Project'
   },
   {
-    id: 'the-system-prompt',
-    name: 'The System Prompt',
-    desc: 'AI social media testing environment for custom personas.',
-    tags: ['AI Social Media', 'Personas', 'Testing'],
+    id: 'student-automation',
+    name: 'Student Automation Suite',
+    desc: 'Automate repetitive workflows and save time.',
+    tags: ['Productivity', 'Agentic Workflow', 'Education'],
     position: [0.2, 0, -1.5] as [number, number, number],
+    buttonText: 'Try Demo'
   }
 ];
 
@@ -52,8 +57,11 @@ function BackgroundNetwork() {
   const [positions, linesData] = useMemo(() => {
     const pos = [];
     for (let i = 0; i < particleCount; i++) {
+        // eslint-disable-next-line react-hooks/purity
         const x = (Math.random() - 0.5) * 10;
+        // eslint-disable-next-line react-hooks/purity
         const y = (Math.random() - 0.5) * 10;
+        // eslint-disable-next-line react-hooks/purity
         const z = (Math.random() - 0.5) * 10;
         pos.push(new THREE.Vector3(x, y, z));
     }
@@ -103,6 +111,7 @@ function BackgroundNetwork() {
              count={linesData.length / 3}
              array={linesData}
              itemSize={3}
+             args={[linesData, 3]}
            />
         </bufferGeometry>
         <lineBasicMaterial color="#0F172A" opacity={0.06} transparent />
@@ -199,18 +208,34 @@ function SystemScene({
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={projects.length * 2 * 3}
-            array={new Float32Array([
-              ...projects[0].position, ...projects[1].position,
-              ...projects[1].position, ...projects[2].position,
-              ...projects[2].position, ...projects[3].position,
-              ...projects[3].position, ...projects[4].position,
-              ...projects[4].position, ...projects[0].position,
-              ...projects[0].position, ...projects[2].position,
-              ...projects[1].position, ...projects[3].position,
-              ...projects[2].position, ...projects[4].position,
-            ])}
+            count={16}
+            array={(() => {
+              const arr = new Float32Array([
+                ...projects[0].position, ...projects[1].position,
+                ...projects[1].position, ...projects[2].position,
+                ...projects[2].position, ...projects[3].position,
+                ...projects[3].position, ...projects[4].position,
+                ...projects[4].position, ...projects[0].position,
+                ...projects[0].position, ...projects[2].position,
+                ...projects[1].position, ...projects[3].position,
+                ...projects[2].position, ...projects[4].position,
+              ]);
+              return arr;
+            })()}
             itemSize={3}
+            args={[
+              new Float32Array([
+                ...projects[0].position, ...projects[1].position,
+                ...projects[1].position, ...projects[2].position,
+                ...projects[2].position, ...projects[3].position,
+                ...projects[3].position, ...projects[4].position,
+                ...projects[4].position, ...projects[0].position,
+                ...projects[0].position, ...projects[2].position,
+                ...projects[1].position, ...projects[3].position,
+                ...projects[2].position, ...projects[4].position,
+              ]),
+              3
+            ]}
           />
         </bufferGeometry>
         <lineBasicMaterial color="#C6A15B" opacity={0.15} transparent />
@@ -271,15 +296,23 @@ export default function ProjectNetwork() {
                 ))}
               </div>
               
-              <Link 
-                href="/projects" 
-                className="inline-flex items-center justify-center w-full bg-brand-secondary text-white py-3 rounded-lg text-sm tracking-wide font-medium hover:bg-brand-accent transition-colors gap-2"
-              >
-                Learn More
-                <svg width="12" height="12" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M1 7h12M7 1l6 6-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </Link>
+              <div className="flex flex-col gap-3">
+                <Link 
+                  href="/projects" 
+                  className="inline-flex items-center justify-center w-full bg-brand-secondary text-white py-3 rounded-lg text-sm tracking-wide font-medium hover:bg-brand-accent transition-colors gap-2"
+                >
+                  {selectedProject.buttonText}
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 7h12M7 1l6 6-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </Link>
+                <Link 
+                  href="/contact" 
+                  className="inline-flex items-center justify-center w-full bg-slate-50 border border-slate-200 text-brand-secondary py-3 rounded-lg text-sm tracking-wide font-medium hover:bg-slate-100 transition-colors gap-2"
+                >
+                  Request Similar Solution
+                </Link>
+              </div>
             </div>
           </motion.div>
         )}

@@ -22,7 +22,7 @@ export default function System() {
               The <span className="text-brand-accent italic font-serif">Engine</span> behind the intelligence.
             </h1>
             <p className="text-lg text-slate-500 font-sans leading-relaxed">
-              We ditched standard Python wrappers. Our intelligence system is a stateful, continuous-learning engine built entirely in Rust. It doesn't just predict next tokens—it reasons, delegates, and iterates autonomously.
+              We ditched standard Python wrappers. Our intelligence system is a stateful, continuous-learning engine built entirely in Rust. It doesn&apos;t just predict next tokens—it reasons, delegates, and iterates autonomously.
             </p>
           </div>
 

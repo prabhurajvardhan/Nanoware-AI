@@ -19,22 +19,36 @@ export function Footer() {
           </div>
           
           <div>
-            <h4 className="text-white font-heading font-semibold mb-6">Research</h4>
+            <h4 className="text-white font-heading font-semibold mb-6">Services</h4>
             <ul className="space-y-4 font-sans text-sm">
-              <li><Link href="/research" className="hover:text-brand-accent transition-colors">Neuron Architecture</Link></li>
-              <li><Link href="/system" className="hover:text-brand-accent transition-colors">Intelligence System</Link></li>
-              <li><Link href="/research#reports" className="hover:text-brand-accent transition-colors">Technical Reports</Link></li>
+              <li><Link href="/services#automations" className="hover:text-brand-accent transition-colors">AI Automations</Link></li>
+              <li><Link href="/services#agents" className="hover:text-brand-accent transition-colors">AI Agents</Link></li>
+              <li><Link href="/services#web-development" className="hover:text-brand-accent transition-colors">Web Development</Link></li>
+              <li><Link href="/services#dashboards" className="hover:text-brand-accent transition-colors">Dashboards</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-white font-heading font-semibold mb-6">Work</h4>
+            <ul className="space-y-4 font-sans text-sm">
+              <li><Link href="/projects#demos" className="hover:text-brand-accent transition-colors">Demos</Link></li>
+              <li><Link href="/projects#case-studies" className="hover:text-brand-accent transition-colors">Case Studies</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-white font-heading font-semibold mb-6">Labs</h4>
+            <ul className="space-y-4 font-sans text-sm">
+              <li><Link href="/research" className="hover:text-brand-accent transition-colors">Research</Link></li>
+              <li><Link href="/projects/original" className="hover:text-brand-accent transition-colors">Original Projects</Link></li>
             </ul>
           </div>
 
           <div>
             <h4 className="text-white font-heading font-semibold mb-6">Company</h4>
             <ul className="space-y-4 font-sans text-sm">
-              <li><Link href="/services" className="hover:text-brand-accent transition-colors">Services</Link></li>
-              <li><Link href="/projects" className="hover:text-brand-accent transition-colors">Projects</Link></li>
-              <li><Link href="/about" className="hover:text-brand-accent transition-colors">About Us</Link></li>
-              <li><Link href="/contact" className="hover:text-brand-accent transition-colors">Contact Formulation</Link></li>
-              <li><Link href="/admin" className="hover:text-brand-accent transition-colors opacity-30 hover:opacity-100">Portal</Link></li>
+              <li><Link href="/about" className="hover:text-brand-accent transition-colors">About</Link></li>
+              <li><Link href="/contact" className="hover:text-brand-accent transition-colors">Contact</Link></li>
             </ul>
           </div>
         </div>

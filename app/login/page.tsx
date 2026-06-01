@@ -1,19 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
+import { addDoc, collection, serverTimestamp, setDoc, doc } from 'firebase/firestore';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 
-export default function LoginPage() {
+function LoginContent() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectParams = searchParams.get('redirect');
+  const redirectPath = redirectParams || '/dashboard';
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,6 +29,13 @@ export default function LoginPage() {
       } else {
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
         
+        // Save user data
+        await setDoc(doc(db, 'users', userCred.user.uid), {
+          email: userCred.user.email,
+          createdAt: serverTimestamp(),
+          role: 'client'
+        });
+
         // Seed initial mock data for this user
         const projectRef = await addDoc(collection(db, 'projects'), {
           userId: userCred.user.uid,
@@ -56,10 +67,14 @@ export default function LoginPage() {
           createdAt: serverTimestamp()
         });
       }
-      router.push('/dashboard');
+      
+      // Allow a brief moment for the AuthProvider to set the cookie
+      setTimeout(() => {
+        router.push(redirectPath);
+      }, 500);
+
     } catch (err: any) {
       setError(err.message || 'Authentication failed. Please try again.');
-    } finally {
       setLoading(false);
     }
   };
@@ -74,7 +89,7 @@ export default function LoginPage() {
         <div className="mb-8 text-center">
           <h1 className="font-heading text-2xl font-medium text-brand-secondary mb-2">Client Portal</h1>
           <p className="text-sm text-slate-500">
-            {isLogin ? 'Sign in to track your project progress.' : 'Create an account to view your dashboard.'}
+            {isLogin ? 'Sign in to access your portal.' : 'Create an account to access your portal.'}
           </p>
         </div>
 
@@ -127,5 +142,13 @@ export default function LoginPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex-1 flex justify-center items-center py-24"><div className="w-8 h-8 rounded-full border-2 border-brand-accent border-t-transparent animate-spin"></div></div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

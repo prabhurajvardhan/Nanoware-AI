@@ -2,7 +2,7 @@
 
 import { useRef, useMemo, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
+import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -54,14 +54,11 @@ function BackgroundNetwork() {
   const group = useRef<THREE.Group>(null);
   const particleCount = 60;
   
-  const [positions, linesData] = useMemo(() => {
+  const [[positions, linesData]] = useState(() => {
     const pos = [];
     for (let i = 0; i < particleCount; i++) {
-        // eslint-disable-next-line react-hooks/purity
         const x = (Math.random() - 0.5) * 10;
-        // eslint-disable-next-line react-hooks/purity
         const y = (Math.random() - 0.5) * 10;
-        // eslint-disable-next-line react-hooks/purity
         const z = (Math.random() - 0.5) * 10;
         pos.push(new THREE.Vector3(x, y, z));
     }
@@ -84,7 +81,7 @@ function BackgroundNetwork() {
     });
 
     return [posArray, new Float32Array(linePositions)];
-  }, []);
+  });
 
   useFrame((state, delta) => {
     if (group.current) {
@@ -163,11 +160,15 @@ function ProjectNode({
       </mesh>
       
       {!isActive && (
-        <Html position={[0, -0.6, 0]} center className="pointer-events-none z-0">
-          <div className={`transition-all duration-300 font-heading text-xs whitespace-nowrap tracking-widest uppercase drop-shadow-sm ${hovered ? 'text-brand-accent opacity-100 font-bold' : 'text-slate-500 opacity-70 font-medium'}`}>
-            {project.name}
-          </div>
-        </Html>
+        <Text 
+          position={[0, -0.6, 0]} 
+          fontSize={0.2}
+          color={hovered ? "#C6A15B" : "#64748B"}
+          anchorX="center"
+          anchorY="middle"
+        >
+          {project.name}
+        </Text>
       )}
     </group>
   );
@@ -187,7 +188,6 @@ function SystemScene({
       group.current.rotation.y += delta * 0.08;
       group.current.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.2;
     } else if (group.current && activeProject) {
-      // Ease rotation to stop when interacting
       group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, group.current.rotation.y, 0.1);
     }
   });
@@ -260,11 +260,11 @@ export default function ProjectNetwork() {
       <AnimatePresence>
         {selectedProject && (
           <motion.div 
-            initial={{ opacity: 0, x: 50, scale: 0.95 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 50, scale: 0.95 }}
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.95 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute top-1/2 right-6 md:right-12 -translate-y-1/2 w-full max-w-[calc(100%-3rem)] md:max-w-sm z-10 pointer-events-auto"
+            className="absolute bottom-6 md:bottom-auto md:top-1/2 right-6 left-6 md:left-auto md:right-12 md:-translate-y-1/2 max-w-none md:max-w-sm z-10 pointer-events-auto"
           >
             <div className="glass p-8 rounded-2xl border border-brand-accent/20 shadow-[0_8px_30px_rgb(0,0,0,0.08)] bg-white/80 backdrop-blur-xl">
               <div className="flex justify-between items-start mb-6">

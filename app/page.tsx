@@ -3,6 +3,7 @@ import NeuronNetwork from '@/components/NeuronNetwork';
 import ProjectNetwork from '@/components/ProjectNetwork';
 import ServiceChain from '@/components/ServiceChain';
 import { PageTransition } from '@/components/PageTransition';
+import RevenueLossCalculator from '@/components/RevenueLossCalculator';
 
 export default function Home() {
   return (
@@ -20,7 +21,7 @@ export default function Home() {
                  <span className="h-px w-8 bg-brand-accent"></span>
                  <span className="text-brand-accent font-heading font-medium tracking-widest text-sm uppercase">Nanoware AI</span>
               </div>
-              <h1 className="font-heading text-5xl md:text-7xl lg:text-[5rem] font-medium tracking-tight text-brand-secondary leading-[1.05]">
+              <h1 className="font-heading text-4xl md:text-6xl lg:text-[5rem] font-medium tracking-tight text-brand-secondary leading-[1.05]">
                 Build • Automate •<br />
                 <span className="text-brand-accent italic font-serif">Launch Faster</span>
               </h1>
@@ -69,6 +70,9 @@ export default function Home() {
          </div>
       </section>
 
+      {/* Revenue Loss Calculator Section */}
+      <RevenueLossCalculator />
+
       {/* Projects Network Section */}
       <section className="py-24 bg-white relative border-t border-slate-100">
         <div className="max-w-7xl mx-auto px-6 md:px-12 mb-16 relative z-10">
@@ -76,7 +80,7 @@ export default function Home() {
               <span className="h-px w-8 bg-brand-accent"></span>
               <span className="text-brand-accent font-heading font-medium tracking-widest text-sm uppercase">Active Network</span>
            </div>
-           <h2 className="font-heading text-4xl md:text-5xl font-medium tracking-tight text-brand-secondary">
+           <h2 className="font-heading text-3xl md:text-5xl font-medium tracking-tight text-brand-secondary">
              Test Our <span className="text-brand-accent italic font-serif">Work.</span>
            </h2>
            <p className="text-slate-500 max-w-xl mt-4 font-sans text-sm md:text-base leading-relaxed">
@@ -97,7 +101,7 @@ export default function Home() {
           {/* Header */}
           <div className="flex flex-col md:flex-row justify-between items-start gap-12">
             <div className="max-w-2xl">
-              <h2 className="font-heading text-4xl md:text-5xl lg:text-6xl font-medium tracking-tight text-white mb-6">
+              <h2 className="font-heading text-3xl md:text-5xl lg:text-6xl font-medium tracking-tight text-white mb-6">
                 Built for speed.<br />
                 <span className="text-white/60">Designed for execution.</span>
               </h2>
@@ -115,28 +119,28 @@ export default function Home() {
 
           {/* Pillars */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="glass bg-slate-800/50 backdrop-blur-md border border-slate-700/50 p-8 rounded-3xl">
-              <div className="w-12 h-12 bg-slate-800 rounded-2xl flex items-center justify-center text-brand-accent mb-6 border border-slate-700">
+            <div className="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm">
+              <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-brand-accent mb-6 border border-slate-100">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
               </div>
-              <h3 className="text-xl font-heading font-medium text-white mb-3">Fast Delivery</h3>
-              <p className="text-slate-400 text-sm leading-relaxed">Rapid prototypes and fast launches.</p>
+              <h3 className="text-xl font-heading font-medium text-[#0F172A] mb-3">Fast Delivery</h3>
+              <p className="text-slate-500 text-sm leading-relaxed">Rapid prototypes and fast launches.</p>
             </div>
             
-            <div className="glass bg-slate-800/50 backdrop-blur-md border border-slate-700/50 p-8 rounded-3xl">
-              <div className="w-12 h-12 bg-slate-800 rounded-2xl flex items-center justify-center text-brand-accent mb-6 border border-slate-700">
+            <div className="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm">
+              <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-brand-accent mb-6 border border-slate-100">
                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
               </div>
-              <h3 className="text-xl font-heading font-medium text-white mb-3">Intelligent Systems</h3>
-              <p className="text-slate-400 text-sm leading-relaxed">Built for your workflow and goals.</p>
+              <h3 className="text-xl font-heading font-medium text-[#0F172A] mb-3">Intelligent Systems</h3>
+              <p className="text-slate-500 text-sm leading-relaxed">Built for your workflow and goals.</p>
             </div>
             
-            <div className="glass bg-slate-800/50 backdrop-blur-md border border-slate-700/50 p-8 rounded-3xl">
-              <div className="w-12 h-12 bg-slate-800 rounded-2xl flex items-center justify-center text-brand-accent mb-6 border border-slate-700">
+            <div className="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm">
+              <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-brand-accent mb-6 border border-slate-100">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
               </div>
-              <h3 className="text-xl font-heading font-medium text-white mb-3">Managed Infrastructure</h3>
-              <p className="text-slate-400 text-sm leading-relaxed">We maintain deployment and operations.</p>
+              <h3 className="text-xl font-heading font-medium text-[#0F172A] mb-3">Managed Infrastructure</h3>
+              <p className="text-slate-500 text-sm leading-relaxed">We maintain deployment and operations.</p>
             </div>
           </div>
 
@@ -153,7 +157,7 @@ export default function Home() {
             {/* Timeline UI */}
             <div className="relative">
                {/* Vertical line for mobile, horizontal line for desktop */}
-               <div className="absolute left-[1.15rem] md:left-0 top-0 bottom-0 md:bottom-auto w-px height-full md:h-px md:w-full bg-slate-800 md:top-6 -z-10"></div>
+               <div className="absolute left-5 md:left-0 top-0 bottom-0 md:bottom-auto w-px h-full md:h-px md:w-full bg-slate-800 md:top-5 -z-10"></div>
                
                <div className="flex flex-col md:flex-row justify-between gap-12 md:gap-4 lg:gap-8">
                   {[
@@ -177,24 +181,10 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="md:hidden flex justify-center">
-            <Link href="/contact" className="inline-flex w-full justify-center items-center gap-3 text-sm tracking-wide font-medium bg-white text-brand-secondary hover:bg-slate-200 transition-colors px-8 py-4 rounded-full shadow-lg">
-              Get Free Consultation
-            </Link>
-          </div>
+
 
         </div>
       </section>
-
-      {/* Mobile Sticky CTA */}
-      <div className="md:hidden fixed bottom-6 left-6 right-6 z-50 pointer-events-none">
-        <Link href="/contact" className="pointer-events-auto flex w-full justify-center items-center gap-3 text-sm tracking-wide font-medium bg-brand-secondary text-white hover:bg-slate-800 transition-all px-8 py-4 rounded-full shadow-[0_8px_30px_rgba(15,23,42,0.3)] border border-brand-secondary/50">
-          Request a Solution
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M1 7h12M7 1l6 6-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </Link>
-      </div>
 
     </PageTransition>
   );

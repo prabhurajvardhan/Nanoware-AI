@@ -125,8 +125,8 @@ export default function ServiceChain() {
              ></div>
 
              <div className={clsx(
-               "flex gap-12 md:gap-20 items-center px-8 md:px-16 min-w-max transition-all duration-300",
-               activeIndex !== null ? "pb-[22rem]" : "pb-16"
+               "flex gap-8 md:gap-20 items-center px-6 md:px-16 min-w-max transition-all duration-300",
+               activeIndex !== null ? "pb-[20rem] md:pb-[22rem]" : "pb-8 md:pb-16"
              )}>
                {services.map((service, idx) => {
                  const isActive = activeIndex === idx;
@@ -137,7 +137,10 @@ export default function ServiceChain() {
                      
                      {/* The Block */}
                      <motion.button
-                       onClick={() => setActiveIndex(isActive ? null : idx)}
+                       onClick={(e) => {
+                         e.preventDefault();
+                         setActiveIndex(isActive ? null : idx);
+                       }}
                        onHoverStart={() => { if (activeIndex === null) document.body.style.cursor = 'pointer'; }}
                        onHoverEnd={() => { document.body.style.cursor = 'auto'; }}
                        animate={{
@@ -148,10 +151,11 @@ export default function ServiceChain() {
                          y: -4,
                          scale: 1.02,
                        } : {}}
+                       whileTap={{ scale: 0.95 }}
                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
                        className={clsx(
-                         "w-24 h-24 md:w-32 md:h-32 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all duration-300 relative z-30",
-                         "shadow-[0_4px_20px_rgba(15,23,42,0.06)] hover:shadow-[0_8px_30px_rgba(15,23,42,0.1)]",
+                         "w-20 h-20 md:w-32 md:h-32 rounded-2xl flex flex-col items-center justify-center gap-2 md:gap-3 transition-all duration-300 relative z-30",
+                         "shadow-[0_4px_20px_rgba(15,23,42,0.06)] hover:shadow-[0_8px_30px_rgba(15,23,42,0.1)] touch-manipulation",
                          isActive 
                            ? "bg-brand-primary text-brand-accent shadow-[0_12px_40px_rgba(198,161,91,0.2)]" 
                            : "bg-white text-brand-secondary border border-slate-100"
@@ -178,7 +182,7 @@ export default function ServiceChain() {
                            animate={{ opacity: 1, y: 0, scale: 1 }}
                            exit={{ opacity: 0, y: -20, scale: 0.95 }}
                            transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                           className="absolute top-[120%] left-1/2 -translate-x-1/2 w-[85vw] max-w-[340px] z-40"
+                           className="absolute top-[130%] md:top-[120%] left-1/2 -translate-x-1/2 w-[85vw] md:w-[340px] max-w-[340px] z-[100] md:z-40"
                          >
                            <div className="glass bg-white/95 backdrop-blur-xl p-8 rounded-3xl border border-brand-accent/20 shadow-[0_20px_50px_rgba(15,23,42,0.15)] flex flex-col gap-4">
                               <h3 className="font-heading text-xl font-medium text-brand-secondary">

@@ -5,7 +5,7 @@ export function Footer() {
   return (
     <footer className="bg-brand-secondary text-slate-300 py-16 md:py-24 border-t border-slate-800">
       <div className="max-w-7xl mx-auto px-6 md:px-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-12 mb-16">
           <div className="md:col-span-2">
             <Link href="/" className="inline-flex items-center gap-2 mb-6 group">
               <Logo size={32} />

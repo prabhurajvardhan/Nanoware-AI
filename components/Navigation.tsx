@@ -22,7 +22,7 @@ export function Navigation() {
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -72,12 +72,20 @@ export function Navigation() {
 
           <div className="hidden lg:flex items-center gap-4">
             {user ? (
-              <Link 
-                href="/dashboard"
-                className="text-sm font-medium text-brand-secondary hover:text-brand-accent transition-colors"
-              >
-                Dashboard
-              </Link>
+              <>
+                <Link 
+                  href="/dashboard"
+                  className="text-sm font-medium text-brand-secondary hover:text-brand-accent transition-colors"
+                >
+                  Dashboard
+                </Link>
+                <button 
+                  onClick={logout}
+                  className="text-sm font-medium text-slate-500 hover:text-red-500 transition-colors"
+                >
+                  Logout
+                </button>
+              </>
             ) : (
               <Link 
                 href="/login"
@@ -142,13 +150,24 @@ export function Navigation() {
               ))}
               <div className="pt-8 flex flex-col gap-6 border-t border-slate-100">
                 {user ? (
-                  <Link
-                     href="/dashboard"
-                     onClick={() => setMobileMenuOpen(false)}
-                     className="text-brand-secondary hover:text-brand-accent transition-colors block"
-                  >
-                    Dashboard
-                  </Link>
+                  <>
+                    <Link
+                       href="/dashboard"
+                       onClick={() => setMobileMenuOpen(false)}
+                       className="text-brand-secondary hover:text-brand-accent transition-colors block"
+                    >
+                      Dashboard
+                    </Link>
+                    <button
+                       onClick={() => {
+                         setMobileMenuOpen(false);
+                         logout();
+                       }}
+                       className="text-left text-slate-500 hover:text-red-500 transition-colors block"
+                    >
+                      Logout
+                    </button>
+                  </>
                 ) : (
                   <Link
                      href="/login"

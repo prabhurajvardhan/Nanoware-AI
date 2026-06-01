@@ -26,6 +26,7 @@
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-hook-form": "^7.74.0",
+    "resend": "^6.12.4",
     "tailwind-merge": "^3.3.1",
     "three": "^0.184.0",
     "three-stdlib": "^2.36.1",

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { sendRevenueReportEmail } from '@/lib/email/actions';
 
 export default function RevenueLossCalculator() {
   const [leads, setLeads] = useState<number>(300);
@@ -10,6 +11,24 @@ export default function RevenueLossCalculator() {
   const [clientValue, setClientValue] = useState<number>(1500);
   const [responseDelay, setResponseDelay] = useState<number>(12); // hours
   const [teamSize, setTeamSize] = useState<number>(5);
+
+  const [email, setEmail] = useState('');
+  const [isPending, startTransition] = useTransition();
+  const [sentStatus, setSentStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  const handleSendReport = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    
+    startTransition(async () => {
+      const res = await sendRevenueReportEmail(email, 'Visitor', revenueLoss, recoverable);
+      if (res.success) {
+        setSentStatus('success');
+      } else {
+        setSentStatus('error');
+      }
+    });
+  };
 
   const { finalLoss: revenueLoss, calculatedRecoverable: recoverable, aiScore } = useMemo(() => {
     const totalPotential = leads * clientValue;
@@ -156,16 +175,40 @@ export default function RevenueLossCalculator() {
 
                 {/* CTA */}
                 <div className="pt-4">
-                  <Link 
-                    href="/revenue-loss-calculator"
-                    className="w-full bg-brand-accent text-[#0F172A] py-4 rounded-xl text-sm font-medium tracking-wide flex items-center justify-center gap-3 hover:bg-[#D4AF37] transition-all shadow-[0_4px_14px_rgba(198,161,91,0.3)] hover:shadow-[0_4px_20px_rgba(198,161,91,0.4)]"
-                  >
-                    See Full AI Report
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                  </Link>
-                  <p className="text-center text-[10px] text-slate-500 mt-3 uppercase tracking-widest">
-                    Unlock detailed analytics & architecture recommendations
-                  </p>
+                  {sentStatus === 'success' ? (
+                    <div className="w-full bg-emerald-50 text-emerald-600 border border-emerald-100 py-4 rounded-xl text-sm font-medium flex items-center justify-center gap-2 font-heading">
+                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                       Report sent to your inbox
+                    </div>
+                  ) : (
+                    <form onSubmit={handleSendReport} className="flex flex-col gap-2">
+                       <div className="flex bg-white rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-brand-accent/50 transition-all border border-slate-200 shadow-sm p-1">
+                         <input 
+                           type="email" 
+                           placeholder="Enter your email" 
+                           required 
+                           value={email}
+                           onChange={(e) => setEmail(e.target.value)}
+                           className="w-full bg-transparent px-4 py-2 text-sm focus:outline-none text-[#0f172a] placeholder:text-slate-400"
+                         />
+                         <button 
+                           type="submit" 
+                           disabled={isPending}
+                           className="bg-brand-secondary text-white px-5 rounded-lg text-sm font-medium disabled:opacity-70 hover:bg-brand-accent hover:text-brand-secondary transition-colors whitespace-nowrap"
+                         >
+                           {isPending ? 'Sending...' : 'Send Report'}
+                         </button>
+                       </div>
+                       {sentStatus === 'error' && <p className="text-red-500 text-xs text-center mt-1">Failed to send report.</p>}
+                    </form>
+                  )}
+                  
+                  <div className="mt-4 text-center">
+                    <Link href="/revenue-loss-calculator" className="text-xs text-slate-500 hover:text-brand-accent transition-colors uppercase tracking-widest font-medium group inline-flex items-center gap-1">
+                      View report online
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:translate-x-1 transition-transform"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </Link>
+                  </div>
                 </div>
 
               </div>

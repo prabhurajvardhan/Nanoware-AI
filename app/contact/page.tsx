@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { firestoreDb } from '@/lib/firebase';
 import { PageTransition } from '@/components/PageTransition';
@@ -11,6 +11,7 @@ import {
   MessagesSquare, Cloud, Zap, Shield, Image as ImageIcon 
 } from 'lucide-react';
 import clsx from 'clsx';
+import { sendSolutionRequestEmails } from '@/lib/email/actions';
 
 enum OperationType {
   CREATE = 'create',
@@ -101,6 +102,19 @@ export default function Contact() {
       };
 
       await addDoc(requestsRef, payload);
+      
+      // Attempt to send email notifications
+      try {
+        await sendSolutionRequestEmails(
+          data.contactEmail,
+          data.contactName,
+          flow === 'web' ? 'Web Development' : 'AI Services',
+          description
+        );
+      } catch (emailError) {
+        console.error('Failed to send request emails:', emailError);
+      }
+      
       setSuccess(true);
     } catch (error) {
        console.error(error);

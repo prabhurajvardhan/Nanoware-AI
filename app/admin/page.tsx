@@ -21,7 +21,10 @@ export default function AdminDashboard() {
       await updateDoc(reqRef, { status: 'accepted' });
       
       // Send the email via Server Action
-      await sendAcceptedEmailAction(req.email, req.name, req.projectType || 'Custom Solution');
+      const emailResult = await sendAcceptedEmailAction(req.email, req.name, req.projectType || 'Custom Solution');
+      if (emailResult && !emailResult.success) {
+        throw new Error(`Email sending failed: ${emailResult.error}`);
+      }
       
       // Update local state
       setRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'accepted' } : r));

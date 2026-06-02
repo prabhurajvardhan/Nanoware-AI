@@ -5,7 +5,10 @@ import { sendRequestAcceptedEmail } from '@/lib/email/actions';
 export async function sendAcceptedEmailAction(reqEmail: string, reqName: string, reqService: string) {
   try {
     // Send the email
-    await sendRequestAcceptedEmail(reqEmail, reqName, reqService);
+    const result = await sendRequestAcceptedEmail(reqEmail, reqName, reqService);
+    if (result && !result.success) {
+      throw new Error(result.error as string);
+    }
 
     return { success: true };
   } catch (error: any) {

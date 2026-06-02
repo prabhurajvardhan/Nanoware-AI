@@ -41,9 +41,9 @@ export async function sendWelcomeEmail(to: string, name: string) {
     );
     
     return { success: true, data };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to send welcome email:', error);
-    return { success: false, error };
+    return { success: false, error: error?.message || String(error) };
   }
 }
 
@@ -63,9 +63,9 @@ export async function sendAuthEmail(to: string, title: string, message: string, 
     });
     
     return { success: true, data };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to send auth email:', error);
-    return { success: false, error };
+    return { success: false, error: error?.message || String(error) };
   }
 }
 
@@ -98,9 +98,9 @@ export async function sendRevenueReportEmail(to: string, name: string, loss: num
     );
     
     return { success: true, data };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to send revenue report email:', error);
-    return { success: false, error };
+    return { success: false, error: error?.message || String(error) };
   }
 }
 
@@ -120,9 +120,9 @@ export async function sendWelcomeBackEmail(to: string, name: string) {
     });
     
     return { success: true, data };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to send welcome back email:', error);
-    return { success: false, error };
+    return { success: false, error: error?.message || String(error) };
   }
 }
 
@@ -150,9 +150,9 @@ export async function sendRequestAcceptedEmail(to: string, name: string, service
     );
     
     return { success: true, data };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to send request accepted email:', error);
-    return { success: false, error };
+    return { success: false, error: error?.message || String(error) };
   }
 }
 
@@ -188,9 +188,9 @@ export async function sendSolutionRequestEmails(userEmail: string, userName: str
     });
     
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to send solution request emails:', error);
-    return { success: false, error };
+    return { success: false, error: error?.message || String(error) };
   }
 }
 
@@ -230,9 +230,9 @@ export async function sendPaymentEmail(to: string, type: 'success' | 'failed' | 
     );
     
     return { success: true, data };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to send payment email:', error);
-    return { success: false, error };
+    return { success: false, error: error?.message || String(error) };
   }
 }
 
@@ -252,8 +252,8 @@ export async function sendAdminNotification(title: string, eventType: string, su
     });
     
     return { success: true, data };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to send admin notification:', error);
-    return { success: false, error };
+    return { success: false, error: error?.message || String(error) };
   }
 }

@@ -105,14 +105,20 @@ export default function Contact() {
       
       // Attempt to send email notifications
       try {
-        await sendSolutionRequestEmails(
+        const emailResult = await sendSolutionRequestEmails(
           data.contactEmail,
           data.contactName,
           flow === 'web' ? 'Web Development' : 'AI Services',
           description
         );
-      } catch (emailError) {
+        
+        if (emailResult && !emailResult.success) {
+          console.error('Email action failed:', emailResult.error);
+          throw new Error(`Email delivery system failed: ${emailResult.error}`);
+        }
+      } catch (emailError: any) {
         console.error('Failed to send request emails:', emailError);
+        throw emailError; // Re-throw to be caught by the outer catch
       }
       
       setSuccess(true);

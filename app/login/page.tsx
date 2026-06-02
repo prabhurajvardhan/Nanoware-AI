@@ -29,7 +29,10 @@ function LoginContent() {
         const userCred = await signInWithEmailAndPassword(auth, email, password);
         // Send welcome back email
         try {
-          await sendWelcomeBackEmail(userCred.user.email || email, email.split('@')[0]);
+          const emailResult = await sendWelcomeBackEmail(userCred.user.email || email, email.split('@')[0]);
+          if (emailResult && !emailResult.success) {
+            console.error('Welcome Back Email delivery failed:', emailResult.error);
+          }
         } catch (emailError) {
           console.error('Failed to send welcome back email:', emailError);
         }
@@ -76,7 +79,10 @@ function LoginContent() {
 
         // Send welcome email
         try {
-          await sendWelcomeEmail(userCred.user.email || email, email.split('@')[0]);
+          const emailResult = await sendWelcomeEmail(userCred.user.email || email, email.split('@')[0]);
+          if (emailResult && !emailResult.success) {
+            console.error('Welcome Email delivery failed:', emailResult.error);
+          }
         } catch (emailError) {
           console.error('Failed to send welcome email:', emailError);
         }

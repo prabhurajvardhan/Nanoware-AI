@@ -237,12 +237,38 @@ export async function sendPaymentEmail(to: string, type: 'success' | 'failed' | 
 }
 
 /**
+ * Send OTP for 2-Step Verification
+ */
+export async function sendAdminOtpEmail(to: string, code: string) {
+  try {
+    const resend = getResendClient();
+    const html = templates.authEmailTemplate(
+      'Admin Portal Login Verification',
+      'Please use the following 6-digit code to complete your login to the Nanoware Admin Dashboard.',
+      code
+    );
+    
+    const data = await resend.emails.send({
+      from: getFromAddress(),
+      to,
+      subject: 'Nanoware Admin Login Verification Code',
+      html,
+    });
+    
+    return { success: true, data };
+  } catch (error: any) {
+    console.error('Failed to send Admin OTP email:', error);
+    return { success: false, error: error?.message || String(error) };
+  }
+}
+
+/**
  * Generic Admin Notification
  */
 export async function sendAdminNotification(title: string, eventType: string, summary: string, metadata: Record<string, string> = {}) {
   try {
     const resend = getResendClient();
-    const html = templates.adminNotificationTemplate(title, eventType, summary, metadata);
+    const html = templates.adminNotificationTemplate(title, eventType, summary, metadata, getAppUrl());
     
     const data = await resend.emails.send({
       from: getFromAddress(),

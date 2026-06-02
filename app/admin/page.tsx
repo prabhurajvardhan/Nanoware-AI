@@ -2,35 +2,64 @@
 
 import { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs, doc, updateDoc } from 'firebase/firestore';
-import { firestoreDb } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, firestoreDb } from '@/lib/firebase';
 import { PageTransition } from '@/components/PageTransition';
 import { sendAcceptedEmailAction } from './actions';
+import AdminLogin from './AdminLogin';
 
 export default function AdminDashboard() {
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorDetails, setErrorDetails] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [is2FaVerified, setIs2FaVerified] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      
+      // Check session storage for 2FA flag
+      if (currentUser) {
+        const has2fa = sessionStorage.getItem(`2fa_verified_${currentUser.uid}`);
+        if (has2fa === 'true') {
+          setIs2FaVerified(true);
+        } else {
+          setIs2FaVerified(false);
+        }
+      }
+      
+      setAuthLoading(false);
+    });
+    
+    return () => unsubscribe();
+  }, []);
+
+  const handle2FaSuccess = () => {
+    setIs2FaVerified(true);
+    if (user?.uid) {
+      sessionStorage.setItem(`2fa_verified_${user.uid}`, 'true');
+    }
+  };
 
   const handleAcceptRequest = async (req: any) => {
     try {
       setProcessingId(req.id);
       
-      // Update status in Firestore
       const reqRef = doc(firestoreDb, 'requests', req.id);
       await updateDoc(reqRef, { status: 'accepted' });
       
-      // Send the email via Server Action
       const emailResult = await sendAcceptedEmailAction(req.email, req.name, req.projectType || 'Custom Solution');
       if (emailResult && !emailResult.success) {
         throw new Error(`Email sending failed: ${emailResult.error}`);
       }
       
-      // Update local state
       setRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'accepted' } : r));
     } catch (err: any) {
       console.error('Failed to accept request:', err);
-      alert('Failed to accept request: ' + err.message);
+      // alert('Failed to accept request: ' + err.message);
     } finally {
       setProcessingId(null);
     }
@@ -38,6 +67,13 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const fetchRequests = async () => {
+      if (!user || (!is2FaVerified && user)) {
+        setRequests([]);
+        return;
+      }
+      
+      setLoading(true);
+      setErrorDetails('');
       try {
         const q = query(
           collection(firestoreDb, 'requests'),
@@ -53,14 +89,31 @@ export default function AdminDashboard() {
         setRequests(fetched);
       } catch (err: any) {
         console.error(err);
-        setErrorDetails(err.message || "Insufficient permissions or network issue.");
+        setErrorDetails(err.message || "Insufficient permissions.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchRequests();
-  }, []);
+  }, [user, is2FaVerified]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-8 h-8 rounded-full border-2 border-brand-accent border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  // If not authenticated or not 2FA verified, show custom 2-step login
+  if (!user || !is2FaVerified) {
+    return (
+      <PageTransition>
+        <AdminLogin onComplete={handle2FaSuccess} currentUser={user} />
+      </PageTransition>
+    );
+  }
 
   return (
     <PageTransition>

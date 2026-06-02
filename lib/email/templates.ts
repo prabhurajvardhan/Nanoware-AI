@@ -362,7 +362,7 @@ export function paymentEmailTemplate(data: { type: 'success' | 'failed' | 'invoi
   `);
 }
 
-export function adminNotificationTemplate(title: string, eventType: string, summary: string, metadata: Record<string, string>) {
+export function adminNotificationTemplate(title: string, eventType: string, summary: string, metadata: Record<string, string>, url?: string) {
   const metaRows = Object.entries(metadata).map(([key, val]) => `
     <tr>
       <th>${key}</th>
@@ -382,6 +382,12 @@ export function adminNotificationTemplate(title: string, eventType: string, summ
     <table class="data-table">
       ${metaRows}
     </table>
+    ` : ''}
+    
+    ${url ? `
+    <div class="button-container">
+      <a href="${url}/admin" class="button">Go to Admin Panel</a>
+    </div>
     ` : ''}
   `);
 }

@@ -6,7 +6,7 @@ import * as templates from './templates';
 // Helper to get from address
 const getFromAddress = () => {
   // Use a verified domain or default for testing
-  return process.env.EMAIL_FROM || 'onboarding@resend.dev';
+  return process.env.EMAIL_FROM || 'hello@nanowareai.in';
 };
 
 const getAdminAddress = () => {

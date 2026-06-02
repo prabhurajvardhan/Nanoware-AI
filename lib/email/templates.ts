@@ -227,6 +227,43 @@ export function revenueReportEmailTemplate(data: { name: string, loss: number, r
   `);
 }
 
+export function welcomeBackEmailTemplate(name: string, url: string) {
+  return baseLayout(`
+    <h1>Welcome Back!</h1>
+    <p>Hello ${name},</p>
+    <p>We noticed a new login to your Nanoware AI account. We're glad to see you back.</p>
+    <p>Access your dashboard to check the latest updates to your projects, review reports, or request new AI solutions to further optimize your workflows.</p>
+    <div class="button-container">
+      <a href="${url}/dashboard" class="button">Go to Dashboard</a>
+    </div>
+    <p>If this login wasn't you, please secure your account immediately.</p>
+  `);
+}
+
+export function requestAcceptedTemplate(name: string, service: string, url: string) {
+  return baseLayout(`
+    <h1>Solution Request Accepted</h1>
+    <p>Hello ${name},</p>
+    <p>Great news! Your request for the <strong>${service}</strong> solution has been reviewed and accepted by our engineering team.</p>
+    
+    <h2>What happens next?</h2>
+    <p>You can now track the progress of your new solution directly from your dashboard. Our systems will automatically provision the necessary initial resources, and our team will begin the architecture phase.</p>
+    
+    <div class="highlight-box">
+      <div class="highlight-label">Next Steps</div>
+      <p style="margin-bottom: 0;">1. View your project status in the dashboard</p>
+      <p style="margin-bottom: 0;">2. Provide any additional requirements if prompted</p>
+      <p style="margin-bottom: 0;">3. Wait for the initial preview link</p>
+    </div>
+    
+    <div class="button-container">
+      <a href="${url}/dashboard" class="button">View Dashboard</a>
+    </div>
+    
+    <p>We are excited to build this solution for you. If you have any further details to add, feel free to reply to this email.</p>
+  `);
+}
+
 export function requestSolutionUserTemplate(name: string, service: string) {
   return baseLayout(`
     <h1>Request Received</h1>

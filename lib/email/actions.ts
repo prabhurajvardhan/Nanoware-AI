@@ -6,7 +6,7 @@ import * as templates from './templates';
 // Helper to get from address
 const getFromAddress = () => {
   // Use a verified domain or default for testing
-  return process.env.EMAIL_FROM || 'Nanoware AI <noreply@nanoware.ai>';
+  return process.env.EMAIL_FROM || 'onboarding@resend.dev';
 };
 
 const getAdminAddress = () => {
@@ -100,6 +100,58 @@ export async function sendRevenueReportEmail(to: string, name: string, loss: num
     return { success: true, data };
   } catch (error) {
     console.error('Failed to send revenue report email:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Send Welcome Back Email
+ */
+export async function sendWelcomeBackEmail(to: string, name: string) {
+  try {
+    const resend = getResendClient();
+    const html = templates.welcomeBackEmailTemplate(name, getAppUrl());
+    
+    const data = await resend.emails.send({
+      from: getFromAddress(),
+      to,
+      subject: 'Welcome Back to Nanoware AI',
+      html,
+    });
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('Failed to send welcome back email:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Send Request Accepted Email
+ */
+export async function sendRequestAcceptedEmail(to: string, name: string, service: string) {
+  try {
+    const resend = getResendClient();
+    const html = templates.requestAcceptedTemplate(name, service, getAppUrl());
+    
+    const data = await resend.emails.send({
+      from: getFromAddress(),
+      to,
+      subject: `Update: Your request for ${service} has been accepted`,
+      html,
+    });
+    
+    // Also notify admin that the acceptance email was successfully sent
+    await sendAdminNotification(
+      'Service Request Accepted email sent',
+      'request_accepted',
+      `An acceptance email was sent to ${to} for service: ${service}`,
+      { Email: to, Name: name, Service: service }
+    );
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('Failed to send request accepted email:', error);
     return { success: false, error };
   }
 }

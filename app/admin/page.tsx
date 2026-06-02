@@ -1,14 +1,37 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { firestoreDb } from '@/lib/firebase';
 import { PageTransition } from '@/components/PageTransition';
+import { sendAcceptedEmailAction } from './actions';
 
 export default function AdminDashboard() {
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorDetails, setErrorDetails] = useState('');
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  const handleAcceptRequest = async (req: any) => {
+    try {
+      setProcessingId(req.id);
+      
+      // Update status in Firestore
+      const reqRef = doc(firestoreDb, 'requests', req.id);
+      await updateDoc(reqRef, { status: 'accepted' });
+      
+      // Send the email via Server Action
+      await sendAcceptedEmailAction(req.email, req.name, req.projectType || 'Custom Solution');
+      
+      // Update local state
+      setRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'accepted' } : r));
+    } catch (err: any) {
+      console.error('Failed to accept request:', err);
+      alert('Failed to accept request: ' + err.message);
+    } finally {
+      setProcessingId(null);
+    }
+  };
 
   useEffect(() => {
     const fetchRequests = async () => {
@@ -98,9 +121,21 @@ export default function AdminDashboard() {
                              </div>
                           </div>
                           
-                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-4">
                              <p className="text-sm text-slate-600 whitespace-pre-wrap">{req.description}</p>
                           </div>
+                          
+                          {req.status === 'pending' && (
+                            <div className="flex justify-end pt-2 border-t border-slate-100">
+                              <button
+                                onClick={() => handleAcceptRequest(req)}
+                                disabled={processingId === req.id}
+                                className="bg-brand-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-accent/90 disabled:opacity-50 transition-colors"
+                              >
+                                {processingId === req.id ? 'Accepting...' : 'Accept Request & Notify'}
+                              </button>
+                            </div>
+                          )}
                        </div>
                    </div>
                 ))}

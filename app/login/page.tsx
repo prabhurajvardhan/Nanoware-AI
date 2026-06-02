@@ -6,6 +6,7 @@ import { auth, db } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp, setDoc, doc } from 'firebase/firestore';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { sendWelcomeEmail, sendWelcomeBackEmail } from '@/lib/email/actions';
 
 function LoginContent() {
   const [isLogin, setIsLogin] = useState(true);
@@ -25,7 +26,13 @@ function LoginContent() {
     setError('');
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        const userCred = await signInWithEmailAndPassword(auth, email, password);
+        // Send welcome back email
+        try {
+          await sendWelcomeBackEmail(userCred.user.email || email, email.split('@')[0]);
+        } catch (emailError) {
+          console.error('Failed to send welcome back email:', emailError);
+        }
       } else {
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
         
@@ -66,6 +73,13 @@ function LoginContent() {
           message: 'System architecture approved by lead engineer.',
           createdAt: serverTimestamp()
         });
+
+        // Send welcome email
+        try {
+          await sendWelcomeEmail(userCred.user.email || email, email.split('@')[0]);
+        } catch (emailError) {
+          console.error('Failed to send welcome email:', emailError);
+        }
       }
       
       // Allow a brief moment for the AuthProvider to set the cookie

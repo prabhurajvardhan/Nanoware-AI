@@ -124,22 +124,31 @@ function ProjectNode({
   onClick: () => void; 
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const textRef = useRef<THREE.Group>(null);
   const [hovered, setHover] = useState(false);
 
   useFrame((state, delta) => {
     if (meshRef.current) {
+      // Only rotate the mesh, not the text
       meshRef.current.rotation.x += delta * 0.3;
       meshRef.current.rotation.y += delta * 0.4;
       
       const targetScale = isActive ? 1.6 : hovered ? 1.3 : 1;
       meshRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.15);
     }
+    
+    // Make text always face camera (billboard effect)
+    if (textRef.current) {
+      textRef.current.quaternion.copy(state.camera.quaternion);
+    }
   });
 
   return (
-    <group position={project.position}>
+    <>
+      {/* Rotating block */}
       <mesh
         ref={meshRef}
+        position={project.position}
         onPointerOver={() => { document.body.style.cursor = 'pointer'; setHover(true); }}
         onPointerOut={() => { document.body.style.cursor = 'auto'; setHover(false); }}
         onClick={(e) => {
@@ -156,18 +165,20 @@ function ProjectNode({
         />
       </mesh>
       
+      {/* Non-rotating text that faces camera */}
       {!isActive && (
-        <Text 
-          position={[0, -0.6, 0]} 
-          fontSize={0.2}
-          color={hovered ? "#C6A15B" : "#64748B"}
-          anchorX="center"
-          anchorY="middle"
-        >
-          {project.name}
-        </Text>
+        <group ref={textRef} position={[project.position[0], project.position[1] - 0.6, project.position[2]]}>
+          <Text 
+            fontSize={0.2}
+            color={hovered ? "#C6A15B" : "#64748B"}
+            anchorX="center"
+            anchorY="middle"
+          >
+            {project.name}
+          </Text>
+        </group>
       )}
-    </group>
+    </>
   );
 }
 

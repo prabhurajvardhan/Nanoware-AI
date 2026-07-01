@@ -105,9 +105,6 @@ function BackgroundNetwork() {
         <bufferGeometry>
            <bufferAttribute
              attach="attributes-position"
-             count={linesData.length / 3}
-             array={linesData}
-             itemSize={3}
              args={[linesData, 3]}
            />
         </bufferGeometry>
@@ -208,21 +205,6 @@ function SystemScene({
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={16}
-            array={(() => {
-              const arr = new Float32Array([
-                ...projects[0].position, ...projects[1].position,
-                ...projects[1].position, ...projects[2].position,
-                ...projects[2].position, ...projects[3].position,
-                ...projects[3].position, ...projects[4].position,
-                ...projects[4].position, ...projects[0].position,
-                ...projects[0].position, ...projects[2].position,
-                ...projects[1].position, ...projects[3].position,
-                ...projects[2].position, ...projects[4].position,
-              ]);
-              return arr;
-            })()}
-            itemSize={3}
             args={[
               new Float32Array([
                 ...projects[0].position, ...projects[1].position,

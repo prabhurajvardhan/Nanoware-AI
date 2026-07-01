@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { requestAdminOtpAction, verifyAdminOtpAction } from './auth-actions';
@@ -22,12 +22,8 @@ export default function AdminLogin({ onComplete, currentUser }: AdminLoginProps)
   const [otpError, setOtpError] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
   
-  // Triggers sending OTP on mount if we start at OTP step
-  useEffect(() => {
-    if (currentUser && currentUser.email && step === 'otp') {
-      handleRequestOtp(currentUser.email);
-    }
-  }, [currentUser, step]);
+  // Track if we've already triggered OTP for current session
+  const otpTriggeredRef = useRef(false);
 
   const handleRequestOtp = async (targetEmail: string) => {
     setOtpLoading(true);
@@ -43,6 +39,18 @@ export default function AdminLogin({ onComplete, currentUser }: AdminLoginProps)
       setOtpLoading(false);
     }
   };
+  
+  // Triggers sending OTP on mount if we start at OTP step
+  useEffect(() => {
+    if (currentUser && currentUser.email && step === 'otp' && !otpTriggeredRef.current) {
+      otpTriggeredRef.current = true;
+      // Use setTimeout to defer the async call outside the effect
+      const timer = setTimeout(() => {
+        handleRequestOtp(currentUser.email);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [currentUser, step]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

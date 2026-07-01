@@ -65,9 +65,6 @@ function Network() {
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={positions.length / 3}
-            array={positions}
-            itemSize={3}
             args={[positions, 3]}
           />
         </bufferGeometry>
@@ -78,9 +75,6 @@ function Network() {
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={linesData.length / 3}
-            array={linesData}
-            itemSize={3}
             args={[linesData, 3]}
           />
         </bufferGeometry>

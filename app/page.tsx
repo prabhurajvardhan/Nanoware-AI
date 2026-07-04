@@ -4,6 +4,7 @@ import ProjectNetwork from '@/components/ProjectNetwork';
 import ServiceChain from '@/components/ServiceChain';
 import { PageTransition } from '@/components/PageTransition';
 import RevenueLossCalculator from '@/components/RevenueLossCalculator';
+import AuditSection from '@/components/AuditSection';
 
 export default function Home() {
   return (
@@ -69,6 +70,9 @@ export default function Home() {
              Scroll to Explore
          </div>
       </section>
+
+      {/* AI Growth Opportunity Audit Section */}
+      <AuditSection />
 
       {/* Revenue Loss Calculator Section */}
       <RevenueLossCalculator />

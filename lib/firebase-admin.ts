@@ -1,19 +1,18 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 let adminApp: ReturnType<typeof initializeApp> | null = null;
+let adminDb: Firestore | null = null;
 
 export function getFirebaseAdminApp() {
   if (adminApp) {
     return adminApp;
   }
 
-  // For Vercel/serverless environments, use Application Default Credentials
-  // The service account JSON is typically provided via environment variable
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
   if (serviceAccountJson) {
-    // Parse the service account JSON if provided as string
     const serviceAccount = typeof serviceAccountJson === 'string' 
       ? JSON.parse(serviceAccountJson) 
       : serviceAccountJson;
@@ -25,7 +24,6 @@ export function getFirebaseAdminApp() {
         })
       : getApps()[0];
   } else {
-    // Fallback: Use default credentials (works on Vercel with proper env setup)
     adminApp = !getApps().length 
       ? initializeApp({
           projectId: firebaseConfig.projectId,
@@ -34,4 +32,20 @@ export function getFirebaseAdminApp() {
   }
 
   return adminApp;
+}
+
+export function getAdminDb(): Firestore {
+  if (adminDb) {
+    return adminDb;
+  }
+  
+  getFirebaseAdminApp();
+  adminDb = getFirestore();
+  
+  // Use custom database ID if specified
+  if (firebaseConfig.firestoreDatabaseId) {
+    adminDb = getFirestore(adminApp!, firebaseConfig.firestoreDatabaseId);
+  }
+  
+  return adminDb;
 }

@@ -4,10 +4,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { WebsiteCrawler, discoverBusinessInfo, analyzeDesign, analyzeResponsive, analyzeLoadingSpeed, analyzeNavigation, analyzeForms, detectChatWidget, detectNewsletter, detectBlog, analyzeAccessibility, analyzeSEO, analyzeTrustSignals } from '@/lib/audit/crawler';
 import { analyzeLeadCapture, analyzeAIReadiness, analyzeCustomerJourney, generateOpportunities, calculateWebsiteScores, calculateOpportunityScores, generateExecutiveSummary, generateRoadmap, generatePricing } from '@/lib/audit/analyzer';
-import { AuditReport, AuditRequest, AuditPhase } from '@/lib/audit/types';
-
-// In-memory storage for demo (would use database in production)
-const auditStore = new Map<string, { report: AuditReport; phase: AuditPhase }>();
+import { AuditReport, AuditRequest } from '@/lib/audit/types';
+import { saveAudit, getAuditById, getRecentAudits } from '@/lib/firebase/auditService';
 
 // Generate unique audit ID
 function generateAuditId(): string {
@@ -47,11 +45,16 @@ export async function POST(request: NextRequest) {
     const auditId = generateAuditId();
     console.log(`Starting audit ${auditId} for ${targetUrl}`);
 
-    // Start audit process (in production, this would be a background job)
+    // Run audit process
     const report = await runAudit(auditId, targetUrl, email);
 
-    // Store report
-    auditStore.set(auditId, { report, phase: 'complete' });
+    // Save to Firebase
+    try {
+      await saveAudit(report);
+      console.log(`Audit ${auditId} saved to Firebase`);
+    } catch (dbError) {
+      console.warn('Failed to save to Firebase, using fallback:', dbError);
+    }
 
     return NextResponse.json({
       id: auditId,
@@ -75,26 +78,36 @@ export async function GET(request: NextRequest) {
   const auditId = searchParams.get('id');
 
   if (auditId) {
-    const stored = auditStore.get(auditId);
-    if (!stored) {
-      return NextResponse.json(
-        { error: 'Audit not found' },
-        { status: 404 }
-      );
+    try {
+      // Try to get from Firebase first
+      const report = await getAuditById(auditId);
+      if (report) {
+        return NextResponse.json(report);
+      }
+    } catch (dbError) {
+      console.warn('Firebase lookup failed:', dbError);
     }
-    return NextResponse.json(stored.report);
+    
+    return NextResponse.json(
+      { error: 'Audit not found' },
+      { status: 404 }
+    );
   }
 
-  // Return list of recent audits (for demo purposes)
-  const audits = Array.from(auditStore.entries()).map(([id, data]) => ({
-    id,
-    url: data.report.url,
-    businessName: data.report.businessName,
-    createdAt: data.report.createdAt,
-    score: data.report.websiteScore.overall,
-  }));
-
-  return NextResponse.json({ audits });
+  // Return list of recent audits
+  try {
+    const audits = await getRecentAudits(20);
+    return NextResponse.json({ audits: audits.map(a => ({
+      id: a.id,
+      url: a.url,
+      businessName: a.businessName,
+      createdAt: a.createdAt,
+      score: a.websiteScore?.overall || 0,
+    }))});
+  } catch (dbError) {
+    console.warn('Firebase lookup failed:', dbError);
+    return NextResponse.json({ audits: [] });
+  }
 }
 
 // Run the complete audit process

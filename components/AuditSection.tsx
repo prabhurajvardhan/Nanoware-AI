@@ -21,30 +21,31 @@ const AUDIT_FEATURES = [
   'Personalized Roadmap',
 ];
 
+interface AuditResponse {
+  id: string;
+  status: string;
+  shareableLink: string;
+}
+
 type AuditPhase = 
   | 'idle'
+  | 'queued'
   | 'discovering'
   | 'researching'
   | 'analyzing'
   | 'generating'
-  | 'complete';
+  | 'complete'
+  | 'error';
 
 const PHASE_LABELS: Record<AuditPhase, string> = {
   idle: 'Ready to Analyze',
+  queued: 'Queuing Audit...',
   discovering: 'Discovering Website',
   researching: 'Researching Website',
   analyzing: 'Analyzing Data',
   generating: 'Generating Insights',
   complete: 'Analysis Complete',
-};
-
-const PHASE_PROGRESS: Record<AuditPhase, number> = {
-  idle: 0,
-  discovering: 20,
-  researching: 45,
-  analyzing: 70,
-  generating: 90,
-  complete: 100,
+  error: 'Analysis Failed',
 };
 
 export default function AuditSection() {
@@ -74,24 +75,64 @@ export default function AuditSection() {
     }
 
     setError(null);
+    setPhase('queued');
+
+    // Simulate visual phases while API processes
+    await new Promise(resolve => setTimeout(resolve, 500));
     setPhase('discovering');
-
-    // Simulate audit phases
-    const phases: AuditPhase[] = ['discovering', 'researching', 'analyzing', 'generating', 'complete'];
     
-    for (let i = 0; i < phases.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 1500));
-      setPhase(phases[i]);
-    }
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setPhase('researching');
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setPhase('analyzing');
 
-    // Generate a mock audit ID
-    const mockAuditId = `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    setAuditId(mockAuditId);
+    try {
+      const response = await fetch('/api/audit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: normalizedUrl }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Audit request failed');
+      }
+
+      const data: AuditResponse = await response.json();
+      
+      setPhase('generating');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setPhase('complete');
+      setAuditId(data.id);
+
+    } catch (err) {
+      console.error('Audit error:', err);
+      setPhase('error');
+      setError('Failed to analyze website. Please try again.');
+    }
   };
 
-  const progress = PHASE_PROGRESS[phase];
-  const isAnalyzing = phase !== 'idle' && phase !== 'complete';
+  const getProgress = (): number => {
+    switch (phase) {
+      case 'idle': return 0;
+      case 'queued': return 5;
+      case 'discovering': return 20;
+      case 'researching': return 45;
+      case 'analyzing': return 70;
+      case 'generating': return 90;
+      case 'complete': return 100;
+      case 'error': return 0;
+      default: return 0;
+    }
+  };
+
+  const progress = getProgress();
+  const isAnalyzing = phase !== 'idle' && phase !== 'complete' && phase !== 'error';
   const isComplete = phase === 'complete';
+  const hasError = phase === 'error';
 
   return (
     <section className="py-24 bg-gradient-to-b from-white to-slate-50 relative overflow-hidden">
@@ -184,14 +225,14 @@ export default function AuditSection() {
 
               {/* Error message */}
               <AnimatePresence>
-                {error && (
+                {(error || hasError) && (
                   <motion.p 
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     className="text-red-500 text-sm"
                   >
-                    {error}
+                    {error || 'An error occurred. Please try again.'}
                   </motion.p>
                 )}
               </AnimatePresence>

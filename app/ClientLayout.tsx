@@ -1,6 +1,7 @@
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { AuthProvider } from '@/components/AuthProvider';
+import ChatWidgetProvider from '@/components/ChatWidgetProvider';
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,6 +12,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           {children}
         </main>
         <Footer />
+        <ChatWidgetProvider />
       </AuthProvider>
     </div>
   );

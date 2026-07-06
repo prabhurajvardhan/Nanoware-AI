@@ -45,22 +45,24 @@ export async function POST(request: NextRequest) {
 
     // Create audit
     const auditId = generateAuditId();
-    console.log(`Starting audit ${auditId} for ${targetUrl}`);
+    console.log(`[API] Starting audit ${auditId} for ${targetUrl}`);
 
     // Run audit process
     const report = await runAudit(auditId, targetUrl, email);
+    
+    console.log(`[API] Audit ${auditId} completed. Business: ${report.businessName}, Score: ${report.websiteScore.overall}`);
 
     // Store in cache (always works, even without Firebase)
     auditCache.set(auditId, report);
-    console.log(`Audit ${auditId} stored in memory cache`);
+    console.log(`[API] Audit ${auditId} stored in memory cache`);
 
     // Try to also save to Firebase (async, non-blocking)
     try {
       const { saveAudit } = await import('@/lib/firebase/auditService');
       await saveAudit(report);
-      console.log(`Audit ${auditId} saved to Firebase`);
+      console.log(`[API] Audit ${auditId} saved to Firebase`);
     } catch (dbError) {
-      console.warn('Firebase save failed (using memory cache):', dbError);
+      console.warn('[API] Firebase save failed (using memory cache):', dbError);
     }
 
     return NextResponse.json({
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest) {
       createdAt: report.createdAt,
     });
   } catch (error) {
-    console.error('Audit error:', error);
+    console.error('[API] Audit error:', error);
     return NextResponse.json(
       { error: 'Failed to start audit', details: String(error) },
       { status: 500 }

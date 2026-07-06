@@ -338,7 +338,7 @@ async function runAudit(auditId: string, url: string, email?: string): Promise<A
   
   // Enhance with AI analysis
   try {
-    console.log(`[${auditId}] Calling Claude 3.5 Sonnet via Bedrock for AI insights...`);
+    console.log(`[${auditId}] Calling Amazon Nova Pro via Bedrock for AI insights...`);
     const aiAnalysis = await analyzeWebsiteWithAI({
       url,
       title: parsed.title,

@@ -1,6 +1,6 @@
 /**
  * AWS Bedrock Service for AI-powered website analysis
- * Uses Claude 3.5 Sonnet via Bedrock in ap-southeast-2 (Sydney)
+ * Uses Amazon Nova via Bedrock in ap-southeast-2 (Sydney)
  */
 
 import {
@@ -11,8 +11,8 @@ import {
 // AWS Region - Sydney
 const AWS_REGION = 'ap-southeast-2';
 
-// Model ID - Claude 3.5 Sonnet
-const MODEL_ID = 'anthropic.claude-3-5-sonnet-20241022-v2:0';
+// Model ID - Amazon Nova Pro (most capable Nova model)
+const MODEL_ID = 'amazon.nova-pro-v1:0';
 
 // Initialize Bedrock client
 let bedrockClient: BedrockRuntimeClient | null = null;
@@ -69,7 +69,7 @@ export interface NORAAnalysisResult {
 }
 
 /**
- * Analyze website using Claude 3.5 Sonnet via AWS Bedrock
+ * Analyze website using Amazon Nova via AWS Bedrock
  */
 export async function analyzeWebsiteWithAI(
   websiteData: WebsiteAnalysisInput,
@@ -93,7 +93,7 @@ Respond ONLY with valid JSON in this exact format (no markdown, no explanation):
   "executiveSummary": "2-3 sentence professional summary of the business and key opportunities",
   "opportunities": [
     {
-      "category": "lead-capture|ai-consultant|automation|seo|performance|ux|marketing",
+      "category": "lead-capture|ai-readiness|automation|seo|performance|ux|trust",
       "priority": "Critical|High|Medium|Low",
       "observation": "What you observed on the website",
       "businessImpact": "How this affects their business",
@@ -124,15 +124,22 @@ Respond ONLY with valid JSON in this exact format (no markdown, no explanation):
   ]
 }`;
 
+  // Nova uses a different API format
   const payload = {
-    anthropic_version: 'bedrock-2023-05-31',
-    max_tokens: 4096,
     messages: [
       {
         role: 'user',
-        content: prompt,
+        content: [
+          {
+            text: prompt,
+          },
+        ],
       },
     ],
+    inferenceConfig: {
+      maxTokens: 4096,
+      temperature: 0.7,
+    },
   };
 
   try {
@@ -147,9 +154,9 @@ Respond ONLY with valid JSON in this exact format (no markdown, no explanation):
     const responseBody = new TextDecoder().decode(response.body);
     const result = JSON.parse(responseBody);
 
-    // Extract text from Claude's response format
-    if (result.content && result.content[0]?.type === 'text') {
-      const jsonStr = result.content[0].text;
+    // Extract text from Nova's response format
+    if (result.message?.content?.[0]?.text) {
+      const jsonStr = result.message.content[0].text;
       return JSON.parse(jsonStr);
     }
 
@@ -162,7 +169,7 @@ Respond ONLY with valid JSON in this exact format (no markdown, no explanation):
 }
 
 /**
- * Generate NORA's conversational response
+ * Generate NORA's conversational response using Nova
  */
 export async function generateNORAResponse(
   userMessage: string,
@@ -192,15 +199,22 @@ User's question: ${userMessage}
 
 Respond as NORA would - professionally, strategically, and helpfully. Keep responses to 2-4 sentences.`;
 
+  // Nova format
   const payload = {
-    anthropic_version: 'bedrock-2023-05-31',
-    max_tokens: 512,
     messages: [
       {
         role: 'user',
-        content: prompt,
+        content: [
+          {
+            text: prompt,
+          },
+        ],
       },
     ],
+    inferenceConfig: {
+      maxTokens: 512,
+      temperature: 0.7,
+    },
   };
 
   try {
@@ -215,8 +229,8 @@ Respond as NORA would - professionally, strategically, and helpfully. Keep respo
     const responseBody = new TextDecoder().decode(response.body);
     const result = JSON.parse(responseBody);
 
-    if (result.content && result.content[0]?.type === 'text') {
-      return result.content[0].text;
+    if (result.message?.content?.[0]?.text) {
+      return result.message.content[0].text;
     }
 
     return 'I appreciate your question. Based on your audit, I recommend we discuss your specific challenges in detail during our strategy session.';
@@ -234,7 +248,7 @@ export function getModelInfo() {
     provider: 'AWS Bedrock',
     region: AWS_REGION,
     model: MODEL_ID,
-    modelName: 'Claude 3.5 Sonnet',
-    description: 'Anthropic Claude 3.5 Sonnet via AWS Bedrock in Sydney (ap-southeast-2)',
+    modelName: 'Amazon Nova Pro',
+    description: 'Amazon Nova Pro via AWS Bedrock in Sydney (ap-southeast-2)',
   };
 }

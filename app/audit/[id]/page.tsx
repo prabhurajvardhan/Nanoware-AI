@@ -187,14 +187,22 @@ export default function AuditPage({ params }: { params: Promise<{ id: string }> 
   useEffect(() => {
     async function fetchAudit() {
       try {
+        console.log('Fetching audit:', id);
         const response = await fetch(`/api/audit?id=${id}`);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log('Audit data received:', data.businessName);
           setAuditData(data);
+        } else if (response.status === 404) {
+          console.warn('Audit not found in API, using mock data');
+          setAuditData(generateMockAuditData(id));
         } else {
+          console.error('API error:', response.status);
           setAuditData(generateMockAuditData(id));
         }
-      } catch {
+      } catch (error) {
+        console.error('Fetch error:', error);
         setAuditData(generateMockAuditData(id));
       } finally {
         setIsLoading(false);

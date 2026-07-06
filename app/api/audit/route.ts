@@ -5,7 +5,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { WebsiteCrawler, discoverBusinessInfo, analyzeDesign, analyzeResponsive, analyzeLoadingSpeed, analyzeNavigation, analyzeForms, detectChatWidget, detectNewsletter, detectBlog, analyzeAccessibility, analyzeSEO, analyzeTrustSignals } from '@/lib/audit/crawler';
 import { analyzeLeadCapture, analyzeAIReadiness, analyzeCustomerJourney, generateOpportunities, calculateWebsiteScores, calculateOpportunityScores, generateExecutiveSummary, generateRoadmap, generatePricing } from '@/lib/audit/analyzer';
 import { AuditReport, AuditRequest } from '@/lib/audit/types';
-import { saveAudit, getAuditById, getRecentAudits } from '@/lib/firebase/auditService';
+
+// In-memory cache for audits (fallback when Firebase is unavailable)
+const auditCache = new Map<string, AuditReport>();
 
 // Generate unique audit ID
 function generateAuditId(): string {
@@ -48,12 +50,17 @@ export async function POST(request: NextRequest) {
     // Run audit process
     const report = await runAudit(auditId, targetUrl, email);
 
-    // Save to Firebase
+    // Store in cache (always works, even without Firebase)
+    auditCache.set(auditId, report);
+    console.log(`Audit ${auditId} stored in memory cache`);
+
+    // Try to also save to Firebase (async, non-blocking)
     try {
+      const { saveAudit } = await import('@/lib/firebase/auditService');
       await saveAudit(report);
       console.log(`Audit ${auditId} saved to Firebase`);
     } catch (dbError) {
-      console.warn('Failed to save to Firebase, using fallback:', dbError);
+      console.warn('Firebase save failed (using memory cache):', dbError);
     }
 
     return NextResponse.json({
@@ -78,10 +85,19 @@ export async function GET(request: NextRequest) {
   const auditId = searchParams.get('id');
 
   if (auditId) {
+    // First try memory cache (always works)
+    const cachedReport = auditCache.get(auditId);
+    if (cachedReport) {
+      console.log(`Audit ${auditId} found in memory cache`);
+      return NextResponse.json(cachedReport);
+    }
+
+    // Try Firebase as fallback
     try {
-      // Try to get from Firebase first
+      const { getAuditById } = await import('@/lib/firebase/auditService');
       const report = await getAuditById(auditId);
       if (report) {
+        console.log(`Audit ${auditId} found in Firebase`);
         return NextResponse.json(report);
       }
     } catch (dbError) {
@@ -96,14 +112,17 @@ export async function GET(request: NextRequest) {
 
   // Return list of recent audits
   try {
+    const { getRecentAudits } = await import('@/lib/firebase/auditService');
     const audits = await getRecentAudits(20);
-    return NextResponse.json({ audits: audits.map(a => ({
-      id: a.id,
-      url: a.url,
-      businessName: a.businessName,
-      createdAt: a.createdAt,
-      score: a.websiteScore?.overall || 0,
-    }))});
+    return NextResponse.json({ 
+      audits: audits.map(a => ({
+        id: a.id,
+        url: a.url,
+        businessName: a.businessName,
+        createdAt: a.createdAt,
+        score: a.websiteScore?.overall || 0,
+      }))
+    });
   } catch (dbError) {
     console.warn('Firebase lookup failed:', dbError);
     return NextResponse.json({ audits: [] });

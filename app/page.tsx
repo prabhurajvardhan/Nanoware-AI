@@ -4,7 +4,7 @@ import ProjectNetwork from '@/components/ProjectNetwork';
 import ServiceChain from '@/components/ServiceChain';
 import { PageTransition } from '@/components/PageTransition';
 import RevenueLossCalculator from '@/components/RevenueLossCalculator';
-import AuditSection from '@/components/AuditSection';
+import NORAWrapper from '@/components/ai-consultant/NORAWrapper';
 
 export default function Home() {
   return (
@@ -72,7 +72,7 @@ export default function Home() {
       </section>
 
       {/* AI Growth Opportunity Audit Section */}
-      <AuditSection />
+      <NORAWrapper />
 
       {/* Revenue Loss Calculator Section */}
       <RevenueLossCalculator />

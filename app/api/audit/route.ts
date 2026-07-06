@@ -5,8 +5,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { WebsiteCrawler, discoverBusinessInfo, analyzeDesign, analyzeResponsive, analyzeLoadingSpeed, analyzeNavigation, analyzeForms, detectChatWidget, detectNewsletter, detectBlog, analyzeAccessibility, analyzeSEO, analyzeTrustSignals } from '@/lib/audit/crawler';
 import { analyzeLeadCapture, analyzeAIReadiness, analyzeCustomerJourney, generateOpportunities, calculateWebsiteScores, calculateOpportunityScores, generateExecutiveSummary, generateRoadmap, generatePricing } from '@/lib/audit/analyzer';
 import { AuditReport, AuditRequest } from '@/lib/audit/types';
+import { analyzeWebsiteWithAI, getModelInfo } from '@/lib/bedrock/bedrockService';
 
-// In-memory cache for audits (fallback when Firebase is unavailable)
+// In-memory cache for audits
 const auditCache = new Map<string, AuditReport>();
 
 // Generate unique audit ID
@@ -47,12 +48,16 @@ export async function POST(request: NextRequest) {
     const auditId = generateAuditId();
     console.log(`[API] Starting audit ${auditId} for ${targetUrl}`);
 
-    // Run audit process
+    // Get model info for response
+    const modelInfo = getModelInfo();
+    console.log(`[API] Using AI Model: ${modelInfo.modelName} (${modelInfo.provider}) in ${modelInfo.region}`);
+
+    // Run audit process with AI
     const report = await runAudit(auditId, targetUrl, email);
     
     console.log(`[API] Audit ${auditId} completed. Business: ${report.businessName}, Score: ${report.websiteScore.overall}`);
 
-    // Store in cache (always works, even without Firebase)
+    // Store in cache
     auditCache.set(auditId, report);
     console.log(`[API] Audit ${auditId} stored in memory cache`);
 
@@ -71,6 +76,7 @@ export async function POST(request: NextRequest) {
       status: 'complete',
       shareableLink: `/audit/${auditId}`,
       createdAt: report.createdAt,
+      aiModel: modelInfo.modelName,
     });
   } catch (error) {
     console.error('[API] Audit error:', error);
@@ -81,13 +87,19 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/audit - Get audit by ID or list audits
+// GET /api/audit - Get audit by ID, list audits, or get model info
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const auditId = searchParams.get('id');
+  const modelInfo = searchParams.get('model');
+
+  // Return model information
+  if (modelInfo === 'true') {
+    return NextResponse.json(getModelInfo());
+  }
 
   if (auditId) {
-    // First try memory cache (always works)
+    // First try memory cache
     const cachedReport = auditCache.get(auditId);
     if (cachedReport) {
       console.log(`Audit ${auditId} found in memory cache`);
@@ -318,10 +330,54 @@ async function runAudit(auditId: string, url: string, email?: string): Promise<A
   
   const customerJourney = analyzeCustomerJourney(websiteAnalysis, leadCapture);
   
-  // Phase 6: Generate Opportunities
-  console.log(`[${auditId}] Phase 6: Generating opportunities...`);
+  // Phase 6: Generate Opportunities (with AI enhancement)
+  console.log(`[${auditId}] Phase 6: Generating opportunities with AI...`);
   
-  const opportunities = generateOpportunities(websiteAnalysis, leadCapture, aiReadiness, customerJourney);
+  // First generate rule-based opportunities
+  let opportunities = generateOpportunities(websiteAnalysis, leadCapture, aiReadiness, customerJourney);
+  
+  // Enhance with AI analysis
+  try {
+    console.log(`[${auditId}] Calling Claude 3.5 Sonnet via Bedrock for AI insights...`);
+    const aiAnalysis = await analyzeWebsiteWithAI({
+      url,
+      title: parsed.title,
+      description: parsed.meta.description,
+      content: parsed.text.substring(0, 3000),
+    }, {
+      name: businessInfo.name,
+      industry: businessInfo.industry,
+    });
+    
+    console.log(`[${auditId}] AI analysis complete. Found ${aiAnalysis.opportunities.length} opportunities.`);
+    
+    // Use AI-generated opportunities if available
+    if (aiAnalysis.opportunities && aiAnalysis.opportunities.length > 0) {
+      // Map AI effort levels to our format
+      const effortMap: Record<string, '1-2 days' | '3-5 days' | '1-2 weeks' | '2-4 weeks' | '1-2 months'> = {
+        'Low': '1-2 days',
+        'Medium': '1-2 weeks',
+        'High': '2-4 weeks',
+      };
+      
+      opportunities = aiAnalysis.opportunities.map((opp, index) => ({
+        id: `ai-opp-${index}`,
+        category: opp.category as 'lead-capture' | 'ai-readiness' | 'automation' | 'ux' | 'seo' | 'performance' | 'trust',
+        title: opp.observation.substring(0, 50),
+        description: opp.observation,
+        priority: opp.priority,
+        observation: opp.observation,
+        businessImpact: opp.businessImpact,
+        recommendation: opp.recommendation,
+        estimatedEffort: effortMap[opp.estimatedEffort] || '1-2 weeks',
+        estimatedValue: opp.estimatedValue,
+        evidence: [`AI-generated insight from Claude 3.5 Sonnet`],
+        relatedScores: [opp.category],
+      }));
+    }
+  } catch (aiError) {
+    console.warn(`[${auditId}] AI analysis failed, using rule-based opportunities:`, aiError);
+  }
   
   // Phase 7-8: Scoring
   console.log(`[${auditId}] Phase 7-8: Calculating scores...`);
@@ -329,7 +385,7 @@ async function runAudit(auditId: string, url: string, email?: string): Promise<A
   const websiteScore = calculateWebsiteScores(websiteAnalysis, leadCapture, aiReadiness, customerJourney, opportunities);
   const opportunityScore = calculateOpportunityScores(opportunities);
   
-  // Phase 9: Executive Summary
+  // Phase 9: Executive Summary (with AI enhancement)
   console.log(`[${auditId}] Phase 9: Generating executive summary...`);
   
   const executiveSummary = generateExecutiveSummary(businessInfo, websiteScore, opportunities, aiReadiness, leadCapture);

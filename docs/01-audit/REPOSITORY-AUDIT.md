@@ -22,7 +22,7 @@ Audited repository HEAD `0d00b9955948fb1127cdec1ce5ba2df787a21a55` on 2026-10-13
 `npm run dev`, `npm run build`, `npm run start`, `npm run lint`, and `npm run clean` are declared. No automated test script is declared.
 
 ## Validation observed
-In the audit environment dependencies were not installed: `npm run lint` could not find `eslint`. `npx tsc --noEmit` reported the TypeScript 6 deprecation error for `baseUrl`; this is an environment/toolchain validation result, not an application code change.
+At the baseline audit, `node_modules` was absent. `npm run lint` exited 127 because the repository-local `eslint` binary was unavailable. `npx tsc --noEmit` was not a valid pinned baseline: it resolved an arbitrary available TypeScript 6 tool and reported the `baseUrl` deprecation error. Therefore the project’s pinned lint/typecheck result is **UNVERIFIED**, not failed or passed. A follow-up must run `npm ci` from `package-lock.json` when permitted, then use `./node_modules/.bin/eslint .`, `./node_modules/.bin/tsc --noEmit`, and the declared build command, recording versions and exit codes.
 
 ## Risks and follow-up
 The repository has no visible test suite, CI workflow, deployment manifest, or agent instructions. Establish baseline tests and CI before feature implementation (TASK-001).

@@ -1,49 +1,86 @@
 # TASK-011 — Owner Dashboard
 
-- **Status:** PROPOSED
+- **Document ID:** TASK-011
+- **Status:** DRAFT
+- **Last updated:** 2026-10-13
+
 - **Priority:** P1
-- **Dependencies:** TASK-008,TASK-009
-- **Related requirements:** PR-01,PR-03
-- **Related architecture:** System architecture
-- **Related tests:** Dashboard regressions
+- **Status:** PROPOSED
+- **Dependencies:** TASK-008, TASK-009
+- **Related requirements:** PR-01, PR-03; owner dashboard
+- **Related architecture:** System architecture and authorization
+- **Related tests:** A/B dashboard isolation, role matrix, loading/error/empty states, booking conflict, listener reconnect, existing route smoke tests.
 
 ## Objective
-Provide tenant-scoped operational views and actions.
+Define an owner/member dashboard that renders tenant-scoped customers, requests, bookings, and configuration with safe mutation states.
 
-## Evidence / Current State
-Use the verified facts in the linked audits. Re-inspect the current tree before coding; planned locations are candidates, not guarantees. Record changed symbols and test evidence.
+## Problem statement
+Current dashboard listens to legacy `projects` by `userId`; it is not evidence of a tenant SaaS dashboard.
+
+## Evidence and context
+The current-state evidence is in the linked audit documents and must be rechecked against the repository at task start. Existing code claims are not inferred from this task file. Target SaaS behavior is PROPOSED unless a source and passing test demonstrate otherwise.
 
 ## Scope
-Wire loading/error/empty states, pagination, mutations, audit and authorization.
+Define role-aware navigation, query boundaries, loading/empty/error/forbidden states, booking actions, pagination, audit visibility, and stale-data handling.
 
-## Non-goals
-Do not redesign unrelated UI, alter production configuration without approval, or implement later features opportunistically.
+## Explicit non-goals
+Do not implement unrelated product features, change Firebase rules, modify application code during this documentation refactor, select an unapproved provider, or invent exact paths/symbols absent from repository evidence.
 
-## Implementation Plan
-1. Confirm current implementation and dependency assumptions.
-2. Define schema, policy, errors, observability, and migration/rollback behavior.
-3. Implement the smallest change in confirmed locations.
-4. Add positive, negative, idempotency, and regression tests.
-5. Run available lint/typecheck/build/test commands and record exact results.
-6. Update linked docs and this task’s completion report.
+## Prerequisites
+Complete the listed dependencies, confirm the branch/status, read the relevant audit and architecture documents, and establish the available pinned validation commands. If a prerequisite is absent or contradictory, stop and document the blocker.
 
-## Security and Data Impact
-Enforce server-side authorization and canonical `businessId`; consider privacy, retention, migration, replay, rate limits, and Admin SDK bypass of rules.
+## Dependencies
+TASK-008, TASK-009. Dependency edges are validated against [the dependency graph](../05-agent-workflows/TASK-DEPENDENCY-GRAPH.md).
 
-## Acceptance Criteria
-- Behavior is observable and matches the objective.
-- Unauthorized, cross-tenant, invalid, expired/replayed, and dependency-failure cases are rejected safely.
-- Tests pass and no unrelated application code changed.
-- Docs, links, logs, migration notes, and rollback steps are complete.
+## Files or components to inspect
+Inspect `app/dashboard/page.tsx`, `app/dashboard/DashboardContent.tsx`, `app/admin/page.tsx`, route middleware, and current Firestore listeners.
 
-## Tests
-Unit, integration, security, and regression coverage appropriate to the change. If no test command exists, establish it as part of TASK-001 and record the command.
+## Expected files or components to modify
+Dashboard feature/API/test documentation; preserve existing UI in this PR.
 
-## Documentation Updates
-Update the linked requirement, architecture, feature, test, and audit documents with verified implementation status.
+## Detailed implementation workflow
+1. Catalogue current dashboard queries and compare them with proposed business scope.
+2. Define member versus owner actions and server mutation paths.
+3. Define list pagination/order/index needs only after data contract is approved.
+4. Specify conflict refresh for booking actions and stale listener recovery.
+5. Define no-data, forbidden, suspended-business, and provider-outage UI states.
+6. Add route regression cases for existing dashboard/projects pages.
 
-## Rollback / Recovery
-Disable the feature or revert the application artifact using the verified deployment process; preserve compatible data and follow the migration rollback plan.
+## Required behavior
+A user sees only businesses for which current membership is valid; booking/customer mutations re-check authorization server-side.
 
-## Completion Report
-The implementer must record changed files, schema/data actions, commands and results, security evidence, unresolved failures, documentation updates, reviewer, and final status.
+## Data contracts or interfaces
+Proposed view models are projections, not raw Firestore documents; mutations return version/state and correlation ID.
+
+## Security requirements
+Client listeners do not replace server authorization; avoid exposing private notes to members without permission.
+
+## Error handling
+Forbidden and missing membership are distinct from empty; stale/conflict state prompts refresh.
+
+## Idempotency and retry behavior
+Read listeners reconnect safely; mutations require idempotency where side effects exist.
+
+## Observability requirements
+Track dashboard load/error latency, denied actions, conflict refreshes, and query sizes.
+
+## Test strategy
+A/B dashboard isolation, role matrix, loading/error/empty states, booking conflict, listener reconnect, existing route smoke tests.
+
+## Acceptance criteria
+Every dashboard screen has actor, query scope, action authorization, state handling, and regression coverage.
+
+## Regression risks
+Legacy `userId` query accidentally exposes or omits target tenant data.
+
+## Rollback or recovery strategy
+Keep legacy screens available behind documented migration path; disable target mutations without deleting data.
+
+## Documentation updates
+Update dashboard, auth, multi-tenancy, and test docs.
+
+## Definition of done
+TASK-012 can consume dashboard events and usage views.
+
+## Completion report
+Record changed files, evidence reviewed, commands/tool versions/exit codes, tests and results, security findings, unresolved decisions, rollback notes, and reviewer status.

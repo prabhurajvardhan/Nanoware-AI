@@ -5,52 +5,62 @@
 - **Last updated:** 2026-10-13
 
 ## Purpose
-Configure services, duration, price/display policy, and active state.
-
-## User stories
-- As a permitted user, I can complete the flow for one business and see durable status.
-- As an unauthorized user, I cannot read or mutate another business’s data.
-- As an operator, I can diagnose failures without exposing secrets or unnecessary personal data.
-
-## Functional requirements
-1. Validate all input at the server boundary.
-2. Resolve `businessId` from trusted context and enforce membership/role.
-3. Make external side effects idempotent and auditable.
-4. Provide loading, empty, success, conflict, forbidden, dependency-failure, and retry states.
-5. Preserve existing routes unless a reviewed migration says otherwise.
+Owners configure services that can be safely displayed and referenced by booking.
 
 ## Current implementation status
-**PROPOSED target feature.** Related current code is not proof of this feature. Existing relevant areas include `app/`, `components/`, `lib/firebase.ts`, `lib/firebase-admin.ts`, and `firestore.rules`; confirm exact integration points during TASK-007.
+**PROPOSED target feature.** The current repository evidence is documented in the audits; related UI/helpers do not prove this feature is implemented.
 
-## Dependencies and data
-- Dependencies: identity/session verification, tenant repository, schema validation, audit logging, and the linked architecture documents.
-- Proposed entities: `services`, each with canonical `businessId` where tenant-owned.
-- Proposed state changes must be represented by explicit transitions and versioned timestamps.
+## Actors and permissions
+Owner; authorized member; public visitor
 
-## Contracts and authorization
-Expose only versioned contracts described in [API contracts](../03-architecture/API-CONTRACTS.md). Public operations use an allowlist; owner operations require membership; admin operations require a separate policy. Never trust client role, plan, or business ID.
+## Preconditions
+Business configured; owner membership; service data valid.
 
-## UI and validation states
-Show optimistic UI only after the operation is safe to retry. Preserve user input on validation errors, avoid leaking whether private records exist, and make conflicts actionable. Announce asynchronous state changes accessibly.
+## Main user journey
+Create draft service -> validate duration/display fields -> publish/activate -> visitor views -> owner archives.
 
-## Security risks
-Cross-tenant access, IDOR, over-posting, replay/duplicate mutation, sensitive-field leakage, abuse/rate exhaustion, provider compromise, and logging of personal data. Add negative tests before marking complete.
+## Alternative journeys and failure cases
+Invalid duration, duplicate name, archived service referenced by booking, unauthorized edit.
+
+## Business rules
+Validation errors retain draft; archive does not delete historical booking references.
+
+## State transitions
+draft/inactive -> active -> archived; archived service cannot accept new booking requests.
+
+## Inputs and outputs
+Inputs and outputs must follow the versioned schemas in [API contracts](../03-architecture/API-CONTRACTS.md). Do not accept client role, plan, or tenant ID as proof.
+
+## Data ownership and tenant boundaries
+Service belongs to one business; public sees only active published fields.
+
+## Authentication and authorization
+Owner writes require membership; public reads use projection.
+
+## Validation rules
+Duration, interval, price display, description, and ordering rules require product decisions where not approved.
+
+## Retry, duplicates, and concurrency
+Publish/archive/retry by stable service ID; no duplicate records.
+
+## Observability
+Catalog change audit, invalid publish count, booking rejection due to inactive service.
 
 ## Acceptance criteria
-- Happy-path behavior works for the allowed role.
-- Invalid, expired, unauthorized, cross-tenant, duplicate, and dependency-failure cases are rejected safely.
-- Data is scoped by `businessId` and public output is allowlisted.
-- Side effects are idempotent and audit evidence exists.
-- Linked task and test cases pass; documentation is updated with changed files and unresolved issues.
+Inactive/archived service is rejected for new requests; historical records remain readable to authorized roles.
 
-## Automated tests
-Unit schema/policy tests; integration repository/API tests; security negative tests; UI state/regression tests; retry/idempotency tests; provider contract tests where relevant. Exact commands must be confirmed by TASK-001.
+## Negative test cases
+- Expired/invalid session or missing membership is denied.
+- Business A cannot read, list, mutate, or infer business B data.
+- Public output contains only approved fields.
+- Malformed input, replay, rate exhaustion, dependency outage, and partial failure are safe and observable.
+- Existing routes remain covered by regression tests.
 
-## Operational considerations
-Track success/error/conflict/latency, rate-limit events, retries, and provider failures with correlation IDs. Define retention and access for personal data before production.
+## Dependencies on other features
+See [TASK-007](../06-task-specifications/TASK-007-PUBLIC-PAGE-AND-SERVICES.md) and the [task dependency graph](../05-agent-workflows/TASK-DEPENDENCY-GRAPH.md).
 
-## Related documents
-- [Multi-tenancy](../03-architecture/MULTI-TENANCY.md)
-- [Security architecture](../03-architecture/SECURITY-ARCHITECTURE.md)
-- [TASK-007](../06-task-specifications/TASK-007-PUBLIC-PAGE-AND-SERVICES.md)
-- [Test strategy](../07-testing/TEST-STRATEGY.md)
+## Open decisions
+Open: price/currency, staff assignment, buffer rules, service versioning.
+
+## Implementation status and evidence
+No target behavior in this document should be marked implemented until code, tests, and operational evidence exist.

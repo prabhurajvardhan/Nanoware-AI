@@ -1,49 +1,87 @@
 # TASK-005 — Business Provisioning
 
-- **Status:** PROPOSED
+- **Document ID:** TASK-005
+- **Status:** DRAFT
+- **Last updated:** 2026-10-13
+
 - **Priority:** P1
-- **Dependencies:** TASK-002,TASK-003,TASK-004
-- **Related requirements:** PR-01
-- **Related architecture:** Data model, auth
-- **Related tests:** Onboarding tests
+- **Status:** PROPOSED
+- **Dependencies:** TASK-002, TASK-003, TASK-004
+- **Related requirements:** PR-01; onboarding
+- **Related architecture:** Data model and authentication
+- **Related tests:** Duplicate signup, slug collision, retry after each partial step, unauthorized membership, and rollback/orphan scan.
 
 ## Objective
-Provision business and owner membership idempotently.
+Specify an idempotent business/workspace and owner-membership provisioning workflow.
 
-## Evidence / Current State
-Use the verified facts in the linked audits. Re-inspect the current tree before coding; planned locations are candidates, not guarantees. Record changed symbols and test evidence.
+## Problem statement
+The current signup creates a `users` document and legacy `projects`; the proposed workspace lifecycle is not implemented or tenant-safe.
+
+## Evidence and context
+The current-state evidence is in the linked audit documents and must be rechecked against the repository at task start. Existing code claims are not inferred from this task file. Target SaaS behavior is PROPOSED unless a source and passing test demonstrate otherwise.
 
 ## Scope
-Implement lifecycle state machine, retries, uniqueness, and recovery.
+Define inputs, identity verification prerequisite, slug uniqueness, business lifecycle, owner membership, retries, orphan cleanup, and operator recovery.
 
-## Non-goals
-Do not redesign unrelated UI, alter production configuration without approval, or implement later features opportunistically.
+## Explicit non-goals
+Do not implement unrelated product features, change Firebase rules, modify application code during this documentation refactor, select an unapproved provider, or invent exact paths/symbols absent from repository evidence.
 
-## Implementation Plan
-1. Confirm current implementation and dependency assumptions.
-2. Define schema, policy, errors, observability, and migration/rollback behavior.
-3. Implement the smallest change in confirmed locations.
-4. Add positive, negative, idempotency, and regression tests.
-5. Run available lint/typecheck/build/test commands and record exact results.
-6. Update linked docs and this task’s completion report.
+## Prerequisites
+Complete the listed dependencies, confirm the branch/status, read the relevant audit and architecture documents, and establish the available pinned validation commands. If a prerequisite is absent or contradictory, stop and document the blocker.
 
-## Security and Data Impact
-Enforce server-side authorization and canonical `businessId`; consider privacy, retention, migration, replay, rate limits, and Admin SDK bypass of rules.
+## Dependencies
+TASK-002, TASK-003, TASK-004. Dependency edges are validated against [the dependency graph](../05-agent-workflows/TASK-DEPENDENCY-GRAPH.md).
 
-## Acceptance Criteria
-- Behavior is observable and matches the objective.
-- Unauthorized, cross-tenant, invalid, expired/replayed, and dependency-failure cases are rejected safely.
-- Tests pass and no unrelated application code changed.
-- Docs, links, logs, migration notes, and rollback steps are complete.
+## Files or components to inspect
+Inspect `app/login/page.tsx`, AuthProvider, Firebase Admin helpers, rules, and any existing user/project creation path.
 
-## Tests
-Unit, integration, security, and regression coverage appropriate to the change. If no test command exists, establish it as part of TASK-001 and record the command.
+## Expected files or components to modify
+Business onboarding and data-model docs; future implementation files must be discovered from current source.
 
-## Documentation Updates
-Update the linked requirement, architecture, feature, test, and audit documents with verified implementation status.
+## Detailed implementation workflow
+1. Confirm current signup side effects and whether a user may own multiple businesses.
+2. Decide when a business ID is allocated and how slug collisions are handled.
+3. Define transaction/batch boundaries and an idempotency key derived from verified identity plus request key.
+4. Model `requested -> identity_verified -> provisioning -> configured -> published` plus failure/suspended states.
+5. Define retry for each resource and orphan reconciliation.
+6. Specify UI recovery for duplicate, expired, and partial provisioning.
+7. Stop if legal consent, owner identity, or production migration requirements are unresolved.
 
-## Rollback / Recovery
-Disable the feature or revert the application artifact using the verified deployment process; preserve compatible data and follow the migration rollback plan.
+## Required behavior
+A repeated onboarding request converges on one business and one owner membership.
 
-## Completion Report
-The implementer must record changed files, schema/data actions, commands and results, security evidence, unresolved failures, documentation updates, reviewer, and final status.
+## Data contracts or interfaces
+Proposed create input: business display name, timezone, contact, consent reference; output includes business ID and provisioning state.
+
+## Security requirements
+Only verified owner identity can create membership; slug/domain claims are not authorization.
+
+## Error handling
+Collision, invalid timezone, duplicate request, dependency failure, and suspended identity have distinct outcomes.
+
+## Idempotency and retry behavior
+Provisioning steps are individually idempotent and resume from persisted state; no duplicate membership or public mapping.
+
+## Observability requirements
+Record state transition, step, retry count, correlation ID, and safe failure code.
+
+## Test strategy
+Duplicate signup, slug collision, retry after each partial step, unauthorized membership, and rollback/orphan scan.
+
+## Acceptance criteria
+State machine, input/output, ownership, retry, and recovery are explicit and independently testable.
+
+## Regression risks
+Creating a second workspace for a retry or exposing a half-configured public page.
+
+## Rollback or recovery strategy
+Keep incomplete work unpublished; operator can resume or archive with an auditable action.
+
+## Documentation updates
+Update onboarding, data model, feature, and operations docs.
+
+## Definition of done
+TASK-006 can rely on a stable published business identity.
+
+## Completion report
+Record changed files, evidence reviewed, commands/tool versions/exit codes, tests and results, security findings, unresolved decisions, rollback notes, and reviewer status.

@@ -1,49 +1,86 @@
 # TASK-008 — CRM
 
-- **Status:** PROPOSED
+- **Document ID:** TASK-008
+- **Status:** DRAFT
+- **Last updated:** 2026-10-13
+
 - **Priority:** P1
-- **Dependencies:** TASK-003,TASK-004,TASK-007
-- **Related requirements:** PR-01
-- **Related architecture:** Multi-tenancy, data model
-- **Related tests:** CRM security tests
+- **Status:** PROPOSED
+- **Dependencies:** TASK-003, TASK-004, TASK-007
+- **Related requirements:** PR-01; CRM
+- **Related architecture:** Multi-tenancy and data model
+- **Related tests:** A/B isolation, public denial, duplicate contact, merge conflict, deletion, export authorization, and retry.
 
 ## Objective
-Create tenant-scoped customer records and history.
+Define tenant-scoped customer records, consent/visibility, search, and history without leaking across businesses.
 
-## Evidence / Current State
-Use the verified facts in the linked audits. Re-inspect the current tree before coding; planned locations are candidates, not guarantees. Record changed symbols and test evidence.
+## Problem statement
+No target CRM collection or current customer-management implementation is verified; booking and assistant features need a privacy boundary.
+
+## Evidence and context
+The current-state evidence is in the linked audit documents and must be rechecked against the repository at task start. Existing code claims are not inferred from this task file. Target SaaS behavior is PROPOSED unless a source and passing test demonstrate otherwise.
 
 ## Scope
-Normalize contact identity, visibility, merge policy, and audit.
+Define customer identity normalization, duplicate/merge policy, notes, conversations linkage, retention, member visibility, and exports/deletion.
 
-## Non-goals
-Do not redesign unrelated UI, alter production configuration without approval, or implement later features opportunistically.
+## Explicit non-goals
+Do not implement unrelated product features, change Firebase rules, modify application code during this documentation refactor, select an unapproved provider, or invent exact paths/symbols absent from repository evidence.
 
-## Implementation Plan
-1. Confirm current implementation and dependency assumptions.
-2. Define schema, policy, errors, observability, and migration/rollback behavior.
-3. Implement the smallest change in confirmed locations.
-4. Add positive, negative, idempotency, and regression tests.
-5. Run available lint/typecheck/build/test commands and record exact results.
-6. Update linked docs and this task’s completion report.
+## Prerequisites
+Complete the listed dependencies, confirm the branch/status, read the relevant audit and architecture documents, and establish the available pinned validation commands. If a prerequisite is absent or contradictory, stop and document the blocker.
 
-## Security and Data Impact
-Enforce server-side authorization and canonical `businessId`; consider privacy, retention, migration, replay, rate limits, and Admin SDK bypass of rules.
+## Dependencies
+TASK-003, TASK-004, TASK-007. Dependency edges are validated against [the dependency graph](../05-agent-workflows/TASK-DEPENDENCY-GRAPH.md).
 
-## Acceptance Criteria
-- Behavior is observable and matches the objective.
-- Unauthorized, cross-tenant, invalid, expired/replayed, and dependency-failure cases are rejected safely.
-- Tests pass and no unrelated application code changed.
-- Docs, links, logs, migration notes, and rollback steps are complete.
+## Files or components to inspect
+Inspect current request/contact payloads, dashboard/admin UI, Firebase access, and email flows for existing personal data.
 
-## Tests
-Unit, integration, security, and regression coverage appropriate to the change. If no test command exists, establish it as part of TASK-001 and record the command.
+## Expected files or components to modify
+CRM/data-model/feature docs and test fixtures; do not migrate existing requests without a separate approved task.
 
-## Documentation Updates
-Update the linked requirement, architecture, feature, test, and audit documents with verified implementation status.
+## Detailed implementation workflow
+1. Inventory current personal fields and their sources.
+2. Define minimum customer record and consent/communication preferences.
+3. Decide whether customer identity is business-local or globally deduplicated; record trade-offs.
+4. Define member/owner visibility and private notes.
+5. Specify merge/export/delete behavior and auditability.
+6. Add cross-tenant and public-projection tests before linking booking data.
 
-## Rollback / Recovery
-Disable the feature or revert the application artifact using the verified deployment process; preserve compatible data and follow the migration rollback plan.
+## Required behavior
+A customer belongs to one business context; CRM views and mutations are membership-authorized.
 
-## Completion Report
-The implementer must record changed files, schema/data actions, commands and results, security evidence, unresolved failures, documentation updates, reviewer, and final status.
+## Data contracts or interfaces
+Proposed customer fields: business ID, normalized contact identifier, display name, consent/preferences, timestamps, and audit references; exact PII policy is OPEN DECISION.
+
+## Security requirements
+Minimize PII, protect notes/conversations, and prevent public enumeration.
+
+## Error handling
+Duplicate/invalid contact, forbidden visibility, retention deletion, and provider failure are explicit.
+
+## Idempotency and retry behavior
+Customer upsert/merge requires an idempotency or deterministic normalization strategy; retries cannot duplicate history.
+
+## Observability requirements
+Log business-scoped action, actor role, result, and merge reason without raw PII.
+
+## Test strategy
+A/B isolation, public denial, duplicate contact, merge conflict, deletion, export authorization, and retry.
+
+## Acceptance criteria
+CRM ownership, visibility, lifecycle, and privacy decisions are concrete and link to booking/assistant boundaries.
+
+## Regression risks
+Cross-business global search and irreversible merge errors.
+
+## Rollback or recovery strategy
+Soft-delete/merge reversal plan required before implementation; preserve audit trail.
+
+## Documentation updates
+Update CRM, data model, privacy operations, and test cases.
+
+## Definition of done
+TASK-009 can create or link a customer safely.
+
+## Completion report
+Record changed files, evidence reviewed, commands/tool versions/exit codes, tests and results, security findings, unresolved decisions, rollback notes, and reviewer status.

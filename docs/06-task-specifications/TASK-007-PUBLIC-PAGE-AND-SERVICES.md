@@ -1,49 +1,86 @@
 # TASK-007 — Public Page and Services
 
-- **Status:** PROPOSED
+- **Document ID:** TASK-007
+- **Status:** DRAFT
+- **Last updated:** 2026-10-13
+
 - **Priority:** P1
-- **Dependencies:** TASK-004,TASK-005,TASK-006
-- **Related requirements:** PR-02,PR-03
-- **Related architecture:** Data model, security
-- **Related tests:** Public projection tests
+- **Status:** PROPOSED
+- **Dependencies:** TASK-004, TASK-005, TASK-006
+- **Related requirements:** PR-02, PR-03; profile and service catalog
+- **Related architecture:** Public projection and data model
+- **Related tests:** Allowlist leakage, draft isolation, invalid duration, unpublished service, owner/member authorization, and existing-route regression.
 
 ## Objective
-Allow owners to publish profile/services and visitors to read safe fields.
+Define owner publishing of an allowlisted profile/service catalog and safe public read behavior.
 
-## Evidence / Current State
-Use the verified facts in the linked audits. Re-inspect the current tree before coding; planned locations are candidates, not guarantees. Record changed symbols and test evidence.
+## Problem statement
+Current pages are Nanoware marketing pages; no business profile/service tenant feature is verified.
+
+## Evidence and context
+The current-state evidence is in the linked audit documents and must be rechecked against the repository at task start. Existing code claims are not inferred from this task file. Target SaaS behavior is PROPOSED unless a source and passing test demonstrate otherwise.
 
 ## Scope
-Build allowlisted projection, service catalog, validation, preview/publish states.
+Define draft/published versions, profile fields, service fields, validation, visibility, ordering, public projection, and owner permissions.
 
-## Non-goals
-Do not redesign unrelated UI, alter production configuration without approval, or implement later features opportunistically.
+## Explicit non-goals
+Do not implement unrelated product features, change Firebase rules, modify application code during this documentation refactor, select an unapproved provider, or invent exact paths/symbols absent from repository evidence.
 
-## Implementation Plan
-1. Confirm current implementation and dependency assumptions.
-2. Define schema, policy, errors, observability, and migration/rollback behavior.
-3. Implement the smallest change in confirmed locations.
-4. Add positive, negative, idempotency, and regression tests.
-5. Run available lint/typecheck/build/test commands and record exact results.
-6. Update linked docs and this task’s completion report.
+## Prerequisites
+Complete the listed dependencies, confirm the branch/status, read the relevant audit and architecture documents, and establish the available pinned validation commands. If a prerequisite is absent or contradictory, stop and document the blocker.
 
-## Security and Data Impact
-Enforce server-side authorization and canonical `businessId`; consider privacy, retention, migration, replay, rate limits, and Admin SDK bypass of rules.
+## Dependencies
+TASK-004, TASK-005, TASK-006. Dependency edges are validated against [the dependency graph](../05-agent-workflows/TASK-DEPENDENCY-GRAPH.md).
 
-## Acceptance Criteria
-- Behavior is observable and matches the objective.
-- Unauthorized, cross-tenant, invalid, expired/replayed, and dependency-failure cases are rejected safely.
-- Tests pass and no unrelated application code changed.
-- Docs, links, logs, migration notes, and rollback steps are complete.
+## Files or components to inspect
+Inspect current public routes/components for regression boundaries, plus routing and Firebase access patterns.
 
-## Tests
-Unit, integration, security, and regression coverage appropriate to the change. If no test command exists, establish it as part of TASK-001 and record the command.
+## Expected files or components to modify
+Feature and API documentation; no public UI or data implementation in this PR.
 
-## Documentation Updates
-Update the linked requirement, architecture, feature, test, and audit documents with verified implementation status.
+## Detailed implementation workflow
+1. List current public routes that must remain unchanged.
+2. Define private draft versus published projection and publication version.
+3. Define service duration/availability dependencies without deciding unapproved pricing policy.
+4. Define owner/member permissions for edit, publish, unpublish.
+5. Define projection tests proving CRM, notes, billing, and private booking details never serialize.
+6. If business fields or legal copy are undecided, record options and block implementation of those fields.
 
-## Rollback / Recovery
-Disable the feature or revert the application artifact using the verified deployment process; preserve compatible data and follow the migration rollback plan.
+## Required behavior
+Visitors see only active published profile/services; owners can preview drafts without exposing them publicly.
 
-## Completion Report
-The implementer must record changed files, schema/data actions, commands and results, security evidence, unresolved failures, documentation updates, reviewer, and final status.
+## Data contracts or interfaces
+Public response contains approved identity, description, contact channels, services, hours, and publication metadata only after allowlist review.
+
+## Security requirements
+Public reads do not require membership but never accept a client-selected private collection or business ID as authorization.
+
+## Error handling
+Invalid service data remains draft; publish conflict is explicit; unknown tenant is safe 404.
+
+## Idempotency and retry behavior
+Publish operation uses version/idempotency semantics; repeated publish does not duplicate data.
+
+## Observability requirements
+Track publication version, validation failures, public read errors, and projection size.
+
+## Test strategy
+Allowlist leakage, draft isolation, invalid duration, unpublished service, owner/member authorization, and existing-route regression.
+
+## Acceptance criteria
+A reviewer can enumerate every public field and every non-public field; publication and rollback states are testable.
+
+## Regression risks
+Accidental serialization of private fields or cache of draft content.
+
+## Rollback or recovery strategy
+Unpublish current version and restore previous publication version; retain audit event.
+
+## Documentation updates
+Update profile, service catalog, routing, API, and security docs.
+
+## Definition of done
+TASK-008 and public booking can depend on a stable, safe projection.
+
+## Completion report
+Record changed files, evidence reviewed, commands/tool versions/exit codes, tests and results, security findings, unresolved decisions, rollback notes, and reviewer status.

@@ -1,49 +1,87 @@
 # TASK-012 — Usage Metering
 
-- **Status:** PROPOSED
+- **Document ID:** TASK-012
+- **Status:** DRAFT
+- **Last updated:** 2026-10-13
+
 - **Priority:** P1
-- **Dependencies:** TASK-009,TASK-010,TASK-011
-- **Related requirements:** PR-05
-- **Related architecture:** Data model, error recovery
-- **Related tests:** Usage replay tests
+- **Status:** PROPOSED
+- **Dependencies:** TASK-009, TASK-010, TASK-011
+- **Related requirements:** PR-05; pricing
+- **Related architecture:** Data model and error recovery
+- **Related tests:** Duplicate event, replay after timeout, two tenants same event key, period boundary, concurrent count, over-limit, repair.
 
 ## Objective
-Count defined qualified events exactly once per business.
+Define exactly which business events count toward usage and record them once with reconciliation.
 
-## Evidence / Current State
-Use the verified facts in the linked audits. Re-inspect the current tree before coding; planned locations are candidates, not guarantees. Record changed symbols and test evidence.
+## Problem statement
+The proposed free allowance depends on “qualified booking request,” but that term is not yet defined and current app has no usage system.
+
+## Evidence and context
+The current-state evidence is in the linked audit documents and must be rechecked against the repository at task start. Existing code claims are not inferred from this task file. Target SaaS behavior is PROPOSED unless a source and passing test demonstrate otherwise.
 
 ## Scope
-Implement immutable events, counters, reconciliation, and definition evidence.
+Define event taxonomy, qualification point, business period/timezone, immutable event key, counter/reconciliation, owner display, limits, and backfill policy.
 
-## Non-goals
-Do not redesign unrelated UI, alter production configuration without approval, or implement later features opportunistically.
+## Explicit non-goals
+Do not implement unrelated product features, change Firebase rules, modify application code during this documentation refactor, select an unapproved provider, or invent exact paths/symbols absent from repository evidence.
 
-## Implementation Plan
-1. Confirm current implementation and dependency assumptions.
-2. Define schema, policy, errors, observability, and migration/rollback behavior.
-3. Implement the smallest change in confirmed locations.
-4. Add positive, negative, idempotency, and regression tests.
-5. Run available lint/typecheck/build/test commands and record exact results.
-6. Update linked docs and this task’s completion report.
+## Prerequisites
+Complete the listed dependencies, confirm the branch/status, read the relevant audit and architecture documents, and establish the available pinned validation commands. If a prerequisite is absent or contradictory, stop and document the blocker.
 
-## Security and Data Impact
-Enforce server-side authorization and canonical `businessId`; consider privacy, retention, migration, replay, rate limits, and Admin SDK bypass of rules.
+## Dependencies
+TASK-009, TASK-010, TASK-011. Dependency edges are validated against [the dependency graph](../05-agent-workflows/TASK-DEPENDENCY-GRAPH.md).
 
-## Acceptance Criteria
-- Behavior is observable and matches the objective.
-- Unauthorized, cross-tenant, invalid, expired/replayed, and dependency-failure cases are rejected safely.
-- Tests pass and no unrelated application code changed.
-- Docs, links, logs, migration notes, and rollback steps are complete.
+## Files or components to inspect
+Inspect booking, assistant, dashboard, and any current request/email persistence; no usage collection is verified.
 
-## Tests
-Unit, integration, security, and regression coverage appropriate to the change. If no test command exists, establish it as part of TASK-001 and record the command.
+## Expected files or components to modify
+Usage/pricing/data-model/test docs only; do not enforce limits in this PR.
 
-## Documentation Updates
-Update the linked requirement, architecture, feature, test, and audit documents with verified implementation status.
+## Detailed implementation workflow
+1. Enumerate candidate events: public submit, qualified request, owner confirmation, assistant tool call; document trade-offs.
+2. Obtain product decision for qualified event before implementation.
+3. Define immutable event key from source event ID and business ID; duplicate/replay behavior.
+4. Define weekly period boundary and timezone, including late events.
+5. Define counter projection versus source-of-truth events and reconciliation.
+6. Define over-limit behavior and owner explanation; do not infer billing entitlement from client UI.
+7. Test replay, partial failure, migration/backfill, and cross-tenant aggregation.
 
-## Rollback / Recovery
-Disable the feature or revert the application artifact using the verified deployment process; preserve compatible data and follow the migration rollback plan.
+## Required behavior
+One qualifying source event yields one business-scoped usage event; counts are explainable from immutable evidence.
 
-## Completion Report
-The implementer must record changed files, schema/data actions, commands and results, security evidence, unresolved failures, documentation updates, reviewer, and final status.
+## Data contracts or interfaces
+Proposed `UsageEvent={businessId,eventKey,kind,occurredAt,periodKey,sourceRef}`; qualification remains OPEN DECISION.
+
+## Security requirements
+Only trusted server events count; client plan/count claims are ignored.
+
+## Error handling
+Reconciliation mismatch is visible to operators; ingestion retry does not double count.
+
+## Idempotency and retry behavior
+Event ingestion is idempotent by event key; counter repair is deterministic.
+
+## Observability requirements
+Track accepted/duplicate/rejected events, counter drift, period, and reconciliation status.
+
+## Test strategy
+Duplicate event, replay after timeout, two tenants same event key, period boundary, concurrent count, over-limit, repair.
+
+## Acceptance criteria
+The qualifying event, period, data source, idempotency key, and user-visible explanation are explicitly approved or marked open.
+
+## Regression risks
+Charging/limiting the wrong event or counting assistant retries.
+
+## Rollback or recovery strategy
+Disable enforcement while retaining immutable events; rebuild counters from source after correction.
+
+## Documentation updates
+Update pricing, usage feature, data model, billing, and test docs.
+
+## Definition of done
+TASK-013 can map usage to provider entitlements without ambiguity.
+
+## Completion report
+Record changed files, evidence reviewed, commands/tool versions/exit codes, tests and results, security findings, unresolved decisions, rollback notes, and reviewer status.

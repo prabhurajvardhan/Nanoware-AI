@@ -21,3 +21,7 @@
 | `auditEvents` | `businessId?`, actor, action, result | Minimize sensitive payload |
 
 Migration from `projects`, `requests`, and `audits` is unresolved; inventory before schema changes.
+
+**Naming decision:** The repository has no verified `memberships` or `businessMembers` collection/model. `memberships` is the canonical **PROPOSED** target name used by these documents because it describes the relationship generically; it is not a current collection and must be approved before implementation.
+
+**Naming decision:** The repository has no verified `memberships` or `businessMembers` collection/model. `memberships` is the canonical **PROPOSED** target name used by these documents because it describes the relationship generically; it is not a current collection and must be approved before implementation.

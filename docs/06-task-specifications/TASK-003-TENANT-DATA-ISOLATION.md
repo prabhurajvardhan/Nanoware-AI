@@ -1,49 +1,87 @@
 # TASK-003 — Tenant Data Isolation
 
-- **Status:** PROPOSED
+- **Document ID:** TASK-003
+- **Status:** DRAFT
+- **Last updated:** 2026-10-13
+
 - **Priority:** P0
-- **Dependencies:** TASK-001,TASK-002
-- **Related requirements:** PR-01,PR-02
-- **Related architecture:** Multi-tenancy, security
-- **Related tests:** Multi-tenant cases
+- **Status:** PROPOSED
+- **Dependencies:** TASK-001, TASK-002
+- **Related requirements:** PR-01, PR-02; multi-tenancy
+- **Related architecture:** Multi-tenancy and data model
+- **Related tests:** A/B reads and writes, list queries, subcollections, public projection, cache isolation, worker authorization, and migration replay.
 
 ## Objective
-Introduce canonical business scoping and prove cross-tenant denial.
+Define the canonical tenant boundary and a migration-safe proof that business A cannot access business B.
 
-## Evidence / Current State
-Use the verified facts in the linked audits. Re-inspect the current tree before coding; planned locations are candidates, not guarantees. Record changed symbols and test evidence.
+## Problem statement
+Current collections use `userId`, public `requests`, legacy `projects`, and Admin SDK `audits`; the target requires business-scoped records and explicit server authorization.
+
+## Evidence and context
+The current-state evidence is in the linked audit documents and must be rechecked against the repository at task start. Existing code claims are not inferred from this task file. Target SaaS behavior is PROPOSED unless a source and passing test demonstrate otherwise.
 
 ## Scope
-Inventory legacy collections, design migration, repositories, rules, and negative tests.
+Inventory collection ownership, choose the proposed tenant identifier, define membership lookup, repository query invariants, rules/Admin paths, migration and deletion behavior.
 
-## Non-goals
-Do not redesign unrelated UI, alter production configuration without approval, or implement later features opportunistically.
+## Explicit non-goals
+Do not implement unrelated product features, change Firebase rules, modify application code during this documentation refactor, select an unapproved provider, or invent exact paths/symbols absent from repository evidence.
 
-## Implementation Plan
-1. Confirm current implementation and dependency assumptions.
-2. Define schema, policy, errors, observability, and migration/rollback behavior.
-3. Implement the smallest change in confirmed locations.
-4. Add positive, negative, idempotency, and regression tests.
-5. Run available lint/typecheck/build/test commands and record exact results.
-6. Update linked docs and this task’s completion report.
+## Prerequisites
+Complete the listed dependencies, confirm the branch/status, read the relevant audit and architecture documents, and establish the available pinned validation commands. If a prerequisite is absent or contradictory, stop and document the blocker.
 
-## Security and Data Impact
-Enforce server-side authorization and canonical `businessId`; consider privacy, retention, migration, replay, rate limits, and Admin SDK bypass of rules.
+## Dependencies
+TASK-001, TASK-002. Dependency edges are validated against [the dependency graph](../05-agent-workflows/TASK-DEPENDENCY-GRAPH.md).
 
-## Acceptance Criteria
-- Behavior is observable and matches the objective.
-- Unauthorized, cross-tenant, invalid, expired/replayed, and dependency-failure cases are rejected safely.
-- Tests pass and no unrelated application code changed.
-- Docs, links, logs, migration notes, and rollback steps are complete.
+## Files or components to inspect
+Inspect `firestore.rules`, `app/login/page.tsx`, dashboard pages, `app/admin/page.tsx`, `lib/firebase/auditService.ts`, and all collection calls.
 
-## Tests
-Unit, integration, security, and regression coverage appropriate to the change. If no test command exists, establish it as part of TASK-001 and record the command.
+## Expected files or components to modify
+Architecture/audit documents and later migration plans; do not alter rules or data in this documentation task.
 
-## Documentation Updates
-Update the linked requirement, architecture, feature, test, and audit documents with verified implementation status.
+## Detailed implementation workflow
+1. Build a collection-by-collection ownership table from source and rules.
+2. Mark legacy `userId` paths CURRENT and `businessId` requirements TARGET.
+3. Verify whether `memberships` or `businessMembers` exists; current repository evidence shows neither, so any name is PROPOSED.
+4. Define authorization before query construction and require repositories to accept trusted tenant context.
+5. Define migration backfill, orphan handling, dual-read/write period, cutover, and rollback.
+6. Model attacker fixtures A/B and test direct get, list, subcollection, cache, export, worker, and Admin SDK paths.
+7. Stop if ownership of existing production data is unknown.
 
-## Rollback / Recovery
-Disable the feature or revert the application artifact using the verified deployment process; preserve compatible data and follow the migration rollback plan.
+## Required behavior
+Tenant-owned records require canonical `businessId`; public projections are the only exception and must be allowlisted.
 
-## Completion Report
-The implementer must record changed files, schema/data actions, commands and results, security evidence, unresolved failures, documentation updates, reviewer, and final status.
+## Data contracts or interfaces
+Proposed `TenantContext={businessId,userId,role}`; no current implementation contract exists.
+
+## Security requirements
+Client-supplied business IDs, roles, and plan claims are untrusted. Admin SDK must repeat authorization because rules do not protect it.
+
+## Error handling
+Cross-tenant reads return 403/404 without existence leakage; missing membership fails closed.
+
+## Idempotency and retry behavior
+Migration retries are idempotent by document ID and recorded checkpoint; no partial backfill is silently treated as complete.
+
+## Observability requirements
+Track denied cross-tenant attempts, migration counts, orphan counts, and reconciliation results without private payloads.
+
+## Test strategy
+A/B reads and writes, list queries, subcollections, public projection, cache isolation, worker authorization, and migration replay.
+
+## Acceptance criteria
+The data model and migration plan name every current collection, tenant rule, exception, test fixture, and unresolved production-data decision.
+
+## Regression risks
+A superficially correct Firestore rule may not protect Admin SDK or API repositories.
+
+## Rollback or recovery strategy
+Use dual-read/forward-compatible migration and restore checkpoints; do not delete legacy data until reconciliation is approved.
+
+## Documentation updates
+Update database audit, multi-tenancy, data model, security audit, and decision log.
+
+## Definition of done
+TASK-004 has an approved tenant context and collection inventory.
+
+## Completion report
+Record changed files, evidence reviewed, commands/tool versions/exit codes, tests and results, security findings, unresolved decisions, rollback notes, and reviewer status.

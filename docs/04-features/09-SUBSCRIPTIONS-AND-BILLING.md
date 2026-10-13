@@ -5,52 +5,62 @@
 - **Last updated:** 2026-10-13
 
 ## Purpose
-Represent provider-verified entitlements and lifecycle.
-
-## User stories
-- As a permitted user, I can complete the flow for one business and see durable status.
-- As an unauthorized user, I cannot read or mutate another business’s data.
-- As an operator, I can diagnose failures without exposing secrets or unnecessary personal data.
-
-## Functional requirements
-1. Validate all input at the server boundary.
-2. Resolve `businessId` from trusted context and enforce membership/role.
-3. Make external side effects idempotent and auditable.
-4. Provide loading, empty, success, conflict, forbidden, dependency-failure, and retry states.
-5. Preserve existing routes unless a reviewed migration says otherwise.
+Represent provider-verified plan state and entitlements for one business.
 
 ## Current implementation status
-**PROPOSED target feature.** Related current code is not proof of this feature. Existing relevant areas include `app/`, `components/`, `lib/firebase.ts`, `lib/firebase-admin.ts`, and `firestore.rules`; confirm exact integration points during TASK-013.
+**PROPOSED target feature.** The current repository evidence is documented in the audits; related UI/helpers do not prove this feature is implemented.
 
-## Dependencies and data
-- Dependencies: identity/session verification, tenant repository, schema validation, audit logging, and the linked architecture documents.
-- Proposed entities: `subscriptions, billingEvents`, each with canonical `businessId` where tenant-owned.
-- Proposed state changes must be represented by explicit transitions and versioned timestamps.
+## Actors and permissions
+Owner; billing provider; webhook worker; operator
 
-## Contracts and authorization
-Expose only versioned contracts described in [API contracts](../03-architecture/API-CONTRACTS.md). Public operations use an allowlist; owner operations require membership; admin operations require a separate policy. Never trust client role, plan, or business ID.
+## Preconditions
+Provider decision, business identity, usage policy, webhook secret.
 
-## UI and validation states
-Show optimistic UI only after the operation is safe to retry. Preserve user input on validation errors, avoid leaking whether private records exist, and make conflicts actionable. Announce asynchronous state changes accessibly.
+## Main user journey
+Owner selects plan -> provider checkout -> signed event -> internal state -> entitlement enforcement/reconciliation.
 
-## Security risks
-Cross-tenant access, IDOR, over-posting, replay/duplicate mutation, sensitive-field leakage, abuse/rate exhaustion, provider compromise, and logging of personal data. Add negative tests before marking complete.
+## Alternative journeys and failure cases
+Forged frontend claim, duplicate/out-of-order webhook, payment failure, grace, cancellation, refund, provider outage.
+
+## Business rules
+Invalid signatures rejected; unknown event audited; processing retryable.
+
+## State transitions
+Proposed states active, trialing, past_due, cancelled, expired; provider mapping OPEN DECISION.
+
+## Inputs and outputs
+Inputs and outputs must follow the versioned schemas in [API contracts](../03-architecture/API-CONTRACTS.md). Do not accept client role, plan, or tenant ID as proof.
+
+## Data ownership and tenant boundaries
+Subscription belongs to business; payment data minimized; entitlement server-side.
+
+## Authentication and authorization
+Only verified provider event or audited operator correction changes status.
+
+## Validation rules
+Webhook signature/event ID, provider IDs, currency/tax, and state transitions validated.
+
+## Retry, duplicates, and concurrency
+Event ID idempotency and reconciliation; never duplicate entitlements.
+
+## Observability
+Signature failures, event lag, drift, state transitions, and provider latency.
 
 ## Acceptance criteria
-- Happy-path behavior works for the allowed role.
-- Invalid, expired, unauthorized, cross-tenant, duplicate, and dependency-failure cases are rejected safely.
-- Data is scoped by `businessId` and public output is allowlisted.
-- Side effects are idempotent and audit evidence exists.
-- Linked task and test cases pass; documentation is updated with changed files and unresolved issues.
+Frontend cannot grant plan; replay/out-of-order tests preserve correct state.
 
-## Automated tests
-Unit schema/policy tests; integration repository/API tests; security negative tests; UI state/regression tests; retry/idempotency tests; provider contract tests where relevant. Exact commands must be confirmed by TASK-001.
+## Negative test cases
+- Expired/invalid session or missing membership is denied.
+- Business A cannot read, list, mutate, or infer business B data.
+- Public output contains only approved fields.
+- Malformed input, replay, rate exhaustion, dependency outage, and partial failure are safe and observable.
+- Existing routes remain covered by regression tests.
 
-## Operational considerations
-Track success/error/conflict/latency, rate-limit events, retries, and provider failures with correlation IDs. Define retention and access for personal data before production.
+## Dependencies on other features
+See [TASK-013](../06-task-specifications/TASK-013-BILLING.md) and the [task dependency graph](../05-agent-workflows/TASK-DEPENDENCY-GRAPH.md).
 
-## Related documents
-- [Multi-tenancy](../03-architecture/MULTI-TENANCY.md)
-- [Security architecture](../03-architecture/SECURITY-ARCHITECTURE.md)
-- [TASK-013](../06-task-specifications/TASK-013-BILLING.md)
-- [Test strategy](../07-testing/TEST-STRATEGY.md)
+## Open decisions
+Open: provider, prices, tax, refunds, trial/grace, portal, regional availability.
+
+## Implementation status and evidence
+No target behavior in this document should be marked implemented until code, tests, and operational evidence exist.

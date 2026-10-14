@@ -69,11 +69,13 @@ function isSameOrigin(request: NextRequest) {
   return true;
 }
 
-function trustedClientKey(request: NextRequest, scope: string) {
+function trustedClientKey(request: NextRequest, scope: string, clientProof: string) {
   const forwarded = request.headers.get('x-forwarded-for');
   const trustedProxy = process.env.TRUSTED_PROXY_IP_HEADER === 'x-forwarded-for';
-  const source = trustedProxy && forwarded ? forwarded.split(',')[0].trim() : 'untrusted-client';
-  return `${scope}:${source || 'unknown'}`;
+  const source = trustedProxy && forwarded ? forwarded.split(',')[0].trim() : '';
+  if (source) return `${scope}:ip:${source}`;
+  const proofHash = crypto.createHash('sha256').update(clientProof).digest('hex');
+  return `${scope}:proof:${proofHash}`;
 }
 
 function response(body: Record<string, unknown>, status: number, requestId: string) {
@@ -102,7 +104,7 @@ export async function POST(request: NextRequest) {
     releaseConcurrency = acquireLocalConcurrency();
     const rateLimit = await import('@/lib/security/rate-limit');
     persistentRateLimitResponse = rateLimit.rateLimitResponse;
-    await rateLimit.enforceRateLimit(trustedClientKey(request, 'session'), 10, 15 * 60 * 1000);
+    await rateLimit.enforceRateLimit(trustedClientKey(request, 'session', idToken), 10, 15 * 60 * 1000);
 
     // Load Firebase Admin only inside the request boundary so initialization failures are observable JSON errors.
     const [{ getAuth }, { getFirebaseAdminApp }] = await Promise.all([

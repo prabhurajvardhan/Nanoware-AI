@@ -33,6 +33,10 @@ test('session failures distinguish invalid credentials from infrastructure failu
   assert.match(sessionSource, /import\('\@\/lib\/firebase-admin'\)/);
   assert.match(sessionSource, /await import\('\@\/lib\/security\/rate-limit'\)/);
   assert.match(sessionSource, /isSameOrigin/);
+  assert.match(sessionSource, /function trustedClientKey\(request: NextRequest, scope: string, clientProof: string\)/);
+  assert.match(sessionSource, /crypto\.createHash\('sha256'\)\.update\(clientProof\)/);
+  assert.doesNotMatch(sessionSource, /'untrusted-client'/);
+  assert.match(sessionSource, /trustedClientKey\(request, 'session', idToken\)/);
   assert.match(sessionSource, /auth_time/);
   assert.match(sessionSource, /Authentication failed\.' \}, 401/);
   assert.match(sessionSource, /temporarily unavailable\.' \}, 503/);

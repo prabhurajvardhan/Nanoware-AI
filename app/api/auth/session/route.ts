@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import crypto from 'node:crypto';
 import { acquireLocalConcurrency, rateLimitResponse } from '@/lib/security/concurrency.mjs';
-import { MFA_COOKIE, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from '@/lib/auth/server';
+import { MFA_COOKIE, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from '@/lib/auth/constants';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

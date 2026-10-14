@@ -2,11 +2,10 @@ import crypto from 'node:crypto';
 import { cookies } from 'next/headers';
 import { getAuth } from 'firebase-admin/auth';
 import { getAdminDb, getFirebaseAdminApp } from '@/lib/firebase-admin';
+import { MFA_COOKIE, SESSION_COOKIE } from './constants';
 
-export const SESSION_COOKIE = '__session';
-export const MFA_COOKIE = '__admin_mfa';
-export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 5;
-export const MFA_MAX_AGE_SECONDS = 60 * 60 * 12;
+// Re-exported so existing importers keep working; the constants themselves live in a dependency-free module.
+export { MFA_COOKIE, MFA_MAX_AGE_SECONDS, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from './constants';
 
 export class AuthBoundaryError extends Error {
   constructor(public readonly code: 'UNAUTHENTICATED' | 'FORBIDDEN' | 'MFA_REQUIRED') {

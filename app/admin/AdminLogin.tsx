@@ -19,6 +19,7 @@ export default function AdminLogin({ onComplete, currentUser }: AdminLoginProps)
   
   // OTP Step State
   const [otp, setOtp] = useState('');
+  const [challengeId, setChallengeId] = useState('');
   const [otpError, setOtpError] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
   
@@ -29,12 +30,21 @@ export default function AdminLogin({ onComplete, currentUser }: AdminLoginProps)
     setOtpLoading(true);
     setOtpError('');
     try {
+      if (auth.currentUser) {
+        const token = await auth.currentUser.getIdToken();
+        const sessionResponse = await fetch('/api/auth/session', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: token }),
+        });
+        if (!sessionResponse.ok) throw new Error('SESSION_UNAVAILABLE');
+      }
       const res = await requestAdminOtpAction(targetEmail);
       if (!res.success) {
         setOtpError(res.error || 'Failed to send OTP.');
+      } else if (res.challengeId) {
+        setChallengeId(res.challengeId);
       }
     } catch (err: any) {
-      setOtpError('Failed to trigger 2FA email: ' + err.message);
+      setOtpError('Unable to start verification. Please try again later.');
     } finally {
       setOtpLoading(false);
     }
@@ -63,17 +73,22 @@ export default function AdminLogin({ onComplete, currentUser }: AdminLoginProps)
           console.warn('Non-admin email attempting to login');
       }
       const cred = await signInWithEmailAndPassword(auth, email, password);
+      const token = await cred.user.getIdToken();
+      const sessionResponse = await fetch('/api/auth/session', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: token }),
+      });
+      if (!sessionResponse.ok) throw new Error('SESSION_UNAVAILABLE');
       // Success, move to OTP step
       setStep('otp');
       // trigger OTP email
       await handleRequestOtp(cred.user.email!);
     } catch (err: any) {
-      console.error('Login failed:', err);
+      console.error('Login failed:', err instanceof Error ? err.message : 'unknown error');
       // Make error more user friendly
       if (err.code === 'auth/invalid-credential') {
         setAuthError('Invalid email or password.');
       } else {
-        setAuthError(err.message || 'Validation failed.');
+        setAuthError('Unable to sign in. Please try again.');
       }
     } finally {
       setAuthLoading(false);
@@ -91,16 +106,19 @@ export default function AdminLogin({ onComplete, currentUser }: AdminLoginProps)
     setOtpLoading(true);
     
     try {
-      const targetEmail = currentUser?.email || email;
-      const res = await verifyAdminOtpAction(targetEmail, otp);
+      if (!challengeId) {
+        setOtpError('Request a new verification code.');
+        return;
+      }
+      const res = await verifyAdminOtpAction(challengeId, otp);
       if (res.success) {
         onComplete();
       } else {
         setOtpError(res.error || 'Incorrect verification code.');
       }
     } catch (err: any) {
-      console.error('OTP Check failed:', err);
-      setOtpError(err.message || 'Verification failed.');
+      console.error('OTP Check failed:', err instanceof Error ? err.message : 'unknown error');
+      setOtpError('Unable to verify the code. Please try again.');
     } finally {
       setOtpLoading(false);
     }
@@ -112,6 +130,7 @@ export default function AdminLogin({ onComplete, currentUser }: AdminLoginProps)
     setEmail('');
     setPassword('');
     setOtp('');
+    setChallengeId('');
   };
 
   return (

@@ -2,6 +2,7 @@
 // Uses fetch API for HTTP requests and parses HTML
 
 import { WebsiteAnalysis, BusinessInfo, LeadCaptureAnalysis, AIReadinessAssessment } from './types';
+import { fetchPublicHtml } from '@/lib/security/safe-fetch';
 
 interface CrawlResult {
   html: string;
@@ -51,34 +52,16 @@ export class WebsiteCrawler {
 
   private async fetchWithTimeout(url: string): Promise<CrawlResult | null> {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-
-      const response = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          'User-Agent': 'Nanoware AI Audit Bot/1.0',
-          'Accept': 'text/html,application/xhtml+xml',
-        },
-      });
-
-      clearTimeout(timeoutId);
-
-      const headers: Record<string, string> = {};
-      response.headers.forEach((value, key) => {
-        headers[key.toLowerCase()] = value;
-      });
-
-      const html = await response.text();
+      const response = await fetchPublicHtml(url);
 
       return {
-        html,
+        html: response.html,
         url,
         status: response.status,
-        headers,
+        headers: response.headers,
       };
     } catch (error) {
-      console.error(`Failed to fetch ${url}:`, error);
+      console.error('Public audit fetch failed:', error instanceof Error ? error.message : 'unknown error');
       return null;
     }
   }

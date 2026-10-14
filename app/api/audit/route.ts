@@ -1,30 +1,34 @@
 // AI Audit Engine API Route
 // Handles audit requests and coordinates the analysis pipeline
 
+import crypto from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { WebsiteCrawler, discoverBusinessInfo, analyzeDesign, analyzeResponsive, analyzeLoadingSpeed, analyzeNavigation, analyzeForms, detectChatWidget, detectNewsletter, detectBlog, analyzeAccessibility, analyzeSEO, analyzeTrustSignals } from '@/lib/audit/crawler';
 import { analyzeLeadCapture, analyzeAIReadiness, analyzeCustomerJourney, generateOpportunities, calculateWebsiteScores, calculateOpportunityScores, generateExecutiveSummary, generateRoadmap, generatePricing } from '@/lib/audit/analyzer';
-import { AuditReport, AuditRequest, AuditPhase } from '@/lib/audit/types';
-
-// In-memory storage for demo (would use database in production)
-const auditStore = new Map<string, { report: AuditReport; phase: AuditPhase }>();
+import { AuditReport, AuditRequest } from '@/lib/audit/types';
+import { normalizeEmail } from '@/lib/security/validation.mjs';
+import { getAuditById, getRecentAudits, saveAudit } from '@/lib/firebase/auditService';
+import { acquireLocalConcurrency, enforceRateLimit, rateLimitResponse, trustedClientKey } from '@/lib/security/rate-limit';
 
 // Generate unique audit ID
 function generateAuditId(): string {
-  return `audit_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+  return `audit_${Date.now()}_${crypto.randomUUID().replaceAll('-', '').slice(0, 16)}`;
 }
 
 // POST /api/audit - Start a new audit
 export async function POST(request: NextRequest) {
+  const release = acquireLocalConcurrency();
   try {
-    const body: AuditRequest = await request.json();
-    const { url, email } = body;
+    await enforceRateLimit(trustedClientKey(request, 'audit'), 3, 15 * 60 * 1000);
+    const body: unknown = await request.json();
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
+    }
+    const input = body as Partial<AuditRequest>;
+    const { url, email } = input;
 
-    if (!url) {
-      return NextResponse.json(
-        { error: 'URL is required' },
-        { status: 400 }
-      );
+    if (typeof url !== 'string' || url.trim().length === 0 || url.length > 2048) {
+      return NextResponse.json({ error: 'A valid URL is required.' }, { status: 400 });
     }
 
     // Normalize URL
@@ -35,12 +39,15 @@ export async function POST(request: NextRequest) {
 
     // Validate URL format
     try {
-      new URL(targetUrl);
+      const parsed = new URL(targetUrl);
+      if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) throw new Error('invalid');
     } catch {
-      return NextResponse.json(
-        { error: 'Invalid URL format' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid URL format.' }, { status: 400 });
+    }
+
+    let normalizedEmail: string | undefined;
+    if (email !== undefined) {
+      try { normalizedEmail = normalizeEmail(email); } catch { return NextResponse.json({ error: 'Invalid email.' }, { status: 400 }); }
     }
 
     // Create audit
@@ -48,10 +55,9 @@ export async function POST(request: NextRequest) {
     console.log(`Starting audit ${auditId} for ${targetUrl}`);
 
     // Start audit process (in production, this would be a background job)
-    const report = await runAudit(auditId, targetUrl, email);
+    const report = await runAudit(auditId, targetUrl, normalizedEmail);
 
-    // Store report
-    auditStore.set(auditId, { report, phase: 'complete' });
+    await saveAudit(report);
 
     return NextResponse.json({
       id: auditId,
@@ -61,11 +67,12 @@ export async function POST(request: NextRequest) {
       createdAt: report.createdAt,
     });
   } catch (error) {
-    console.error('Audit error:', error);
-    return NextResponse.json(
-      { error: 'Failed to start audit', details: String(error) },
-      { status: 500 }
-    );
+    const limited = rateLimitResponse(error);
+    if (limited) return limited;
+    console.error('Audit error:', error instanceof Error ? error.message : 'unknown error');
+    return NextResponse.json({ error: 'Unable to complete the audit.' }, { status: 502 });
+  } finally {
+    release();
   }
 }
 
@@ -75,23 +82,23 @@ export async function GET(request: NextRequest) {
   const auditId = searchParams.get('id');
 
   if (auditId) {
-    const stored = auditStore.get(auditId);
-    if (!stored) {
+    const report = await getAuditById(auditId);
+    if (!report) {
       return NextResponse.json(
         { error: 'Audit not found' },
         { status: 404 }
       );
     }
-    return NextResponse.json(stored.report);
+    return NextResponse.json(report);
   }
 
-  // Return list of recent audits (for demo purposes)
-  const audits = Array.from(auditStore.entries()).map(([id, data]) => ({
-    id,
-    url: data.report.url,
-    businessName: data.report.businessName,
-    createdAt: data.report.createdAt,
-    score: data.report.websiteScore.overall,
+  const reports = await getRecentAudits(20);
+  const audits = reports.map((report) => ({
+    id: report.id,
+    url: report.url,
+    businessName: report.businessName,
+    createdAt: report.createdAt,
+    score: report.websiteScore.overall,
   }));
 
   return NextResponse.json({ audits });
@@ -108,23 +115,11 @@ async function runAudit(auditId: string, url: string, email?: string): Promise<A
   const crawlResult = await crawler.crawl();
   
   if (!crawlResult) {
-    throw new Error(`Failed to fetch website: ${url}`);
+    throw new Error('PUBLIC_FETCH_FAILED');
   }
 
   // Parse the HTML
-  const controller = new AbortController();
-  const fetchTimeout = setTimeout(() => controller.abort(), 30000);
-
-  const response = await fetch(url, {
-    signal: controller.signal,
-    headers: {
-      'User-Agent': 'Nanoware AI Audit Bot/1.0',
-    },
-  });
-
-  clearTimeout(fetchTimeout);
-
-  const html = await response.text();
+  const html = crawlResult.html;
   
   // Parse HTML manually
   const getMetaContent = (html: string, name: string): string => {

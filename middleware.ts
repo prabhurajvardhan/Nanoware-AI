@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  const authToken = request.cookies.get('authToken')?.value;
+  // Presence only provides UX routing. Protected server operations must verify
+  // this HttpOnly Firebase session cookie with the Admin SDK.
+  const sessionCookie = request.cookies.get('__session')?.value;
   
   const protectedRoutes = ['/revenue-loss-calculator', '/dashboard', '/reports', '/client-portal'];
   const isProtectedRoute = protectedRoutes.some(route => request.nextUrl.pathname.startsWith(route));
 
-  if (isProtectedRoute && !authToken) {
+  if (isProtectedRoute && !sessionCookie) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     url.searchParams.set('redirect', request.nextUrl.pathname);
@@ -15,7 +17,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Redirect to dashboard if logged in and trying to access login page
-  if (authToken && request.nextUrl.pathname === '/login') {
+  if (sessionCookie && request.nextUrl.pathname === '/login') {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 

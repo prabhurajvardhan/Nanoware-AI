@@ -117,6 +117,7 @@ All executable task specifications are in [`docs/06-task-specifications/`](../06
 - [TASK-013 — Billing](../06-task-specifications/TASK-013-BILLING.md)
 - [TASK-014 — Operations and admin](../06-task-specifications/TASK-014-OPERATIONS-AND-ADMIN.md)
 - [TASK-015 — Production validation](../06-task-specifications/TASK-015-PRODUCTION-VALIDATION.md)
+- [TASK-016 — Voice assistant](../06-task-specifications/TASK-016-VOICE.md)
 
 The recommended first implementation task is [TASK-001 — Baseline audit](../06-task-specifications/TASK-001-BASELINE-AUDIT.md).
 

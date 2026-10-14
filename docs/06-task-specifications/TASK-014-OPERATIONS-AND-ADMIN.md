@@ -5,7 +5,7 @@
 - **Last updated:** 2026-10-13
 
 - **Priority:** P1
-- **Status:** PROPOSED
+- **Status:** PARTIAL — attributable redacted audit-event foundation implemented; operator ownership, monitoring, backup, break-glass, and incident evidence remain open. See [Batch 3 product foundation evidence](../ROADMAP-BATCH-3-PRODUCT-FOUNDATION.md).
 - **Dependencies:** TASK-002, TASK-003, TASK-012, TASK-013
 - **Related requirements:** All security and operations requirements
 - **Related architecture:** Security architecture and runbooks

@@ -26,6 +26,9 @@ TASK-001 Baseline audit
                  │              │              └─> TASK-012 Usage metering
                  │              └─> (no independent branch)
                  └─> (transitive prerequisites retained in task metadata)
+
+TASK-010 Customer assistant
+  └─> TASK-016 Voice assistant
 ```
 
 ## Direct dependency table
@@ -47,6 +50,7 @@ TASK-001 Baseline audit
 | 013 | 012 |
 | 014 | 002, 003, 012, 013 |
 | 015 | 001, 002, 003, 004, 005, 006, 007, 008, 009, 010, 011, 012, 013, 014 |
+| 016 | 010 |
 
 ## Rules
 No task is intentionally independent except TASK-001. There are no cycles. Redundant transitive dependencies are retained where declared; they must not be removed silently. The validation script checks every task file, every declared edge, graph membership, and cycles before this documentation is considered complete.

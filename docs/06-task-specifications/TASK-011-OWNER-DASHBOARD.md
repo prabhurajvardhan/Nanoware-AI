@@ -5,7 +5,7 @@
 - **Last updated:** 2026-10-13
 
 - **Priority:** P1
-- **Status:** PROPOSED
+- **Status:** PARTIAL — tenant-scoped projection and view-state foundation implemented; repositories, UI wiring, and membership evidence remain open. See [Batch 3 product foundation evidence](../ROADMAP-BATCH-3-PRODUCT-FOUNDATION.md).
 - **Dependencies:** TASK-008, TASK-009
 - **Related requirements:** PR-01, PR-03; owner dashboard
 - **Related architecture:** System architecture and authorization

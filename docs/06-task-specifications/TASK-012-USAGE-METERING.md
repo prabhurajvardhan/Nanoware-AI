@@ -5,7 +5,7 @@
 - **Last updated:** 2026-10-13
 
 - **Priority:** P1
-- **Status:** PROPOSED
+- **Status:** PARTIAL — immutable event identity and replay classification implemented; qualifying-event, period, persistence, and limit policy remain open. See [Batch 3 product foundation evidence](../ROADMAP-BATCH-3-PRODUCT-FOUNDATION.md).
 - **Dependencies:** TASK-009, TASK-010, TASK-011
 - **Related requirements:** PR-05; pricing
 - **Related architecture:** Data model and error recovery

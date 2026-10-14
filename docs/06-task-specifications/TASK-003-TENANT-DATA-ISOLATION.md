@@ -5,7 +5,7 @@
 - **Last updated:** 2026-10-13
 
 - **Priority:** P0
-- **Status:** PROPOSED
+- **Status:** PARTIAL — foundation primitive implemented; tenant schema/migration approval remains open. See [Batch 1 foundation evidence](../ROADMAP-BATCH-1-FOUNDATION.md).
 - **Dependencies:** TASK-001, TASK-002
 - **Related requirements:** PR-01, PR-02; multi-tenancy
 - **Related architecture:** Multi-tenancy and data model

@@ -5,7 +5,7 @@
 - **Last updated:** 2026-10-13
 
 - **Priority:** P1
-- **Status:** PROPOSED
+- **Status:** PARTIAL — allowlisted public projection foundation implemented; resolver, persistence, and publication approval remain open. See [Batch 2 domain foundation evidence](../ROADMAP-BATCH-2-DOMAIN-FOUNDATION.md).
 - **Dependencies:** TASK-004, TASK-005, TASK-006
 - **Related requirements:** PR-02, PR-03; profile and service catalog
 - **Related architecture:** Public projection and data model

@@ -5,7 +5,7 @@
 - **Last updated:** 2026-10-13
 
 - **Priority:** P1
-- **Status:** PROPOSED
+- **Status:** PARTIAL — provider-neutral host normalization/classification implemented; DNS mapping and hosting approval remain open. See [Batch 1 foundation evidence](../ROADMAP-BATCH-1-FOUNDATION.md).
 - **Dependencies:** TASK-005
 - **Related requirements:** PR-02; domain routing
 - **Related architecture:** Domain and subdomain routing

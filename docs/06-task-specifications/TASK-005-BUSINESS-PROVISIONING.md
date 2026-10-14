@@ -5,7 +5,7 @@
 - **Last updated:** 2026-10-13
 
 - **Priority:** P1
-- **Status:** PROPOSED
+- **Status:** PARTIAL — pure lifecycle transition guard implemented; persistence, membership, consent, and recovery ownership remain open. See [Batch 1 foundation evidence](../ROADMAP-BATCH-1-FOUNDATION.md).
 - **Dependencies:** TASK-002, TASK-003, TASK-004
 - **Related requirements:** PR-01; onboarding
 - **Related architecture:** Data model and authentication

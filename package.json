@@ -7,8 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test:security": "node --experimental-strip-types --test test/security-regression.test.mjs test/security-integration.test.mjs test/batch3-regression.test.mjs",
-    "test:tenant": "node --test test/business-access.test.mjs",
+    "test:security": "node --experimental-strip-types --test test/security-regression.test.mjs test/security-integration.test.mjs test/batch3-regression.test.mjs test/google-billing-regression.test.mjs test/auth-session-regression.test.mjs",
     "test:roadmap": "node --test test/roadmap-foundation.test.mjs test/roadmap-domain-foundation.test.mjs test/roadmap-operations-foundation.test.mjs test/roadmap-release-voice.test.mjs",
     "clean": "next clean"
   },
@@ -36,6 +35,7 @@
     "react-dom": "^19.2.1",
     "react-hook-form": "^7.74.0",
     "resend": "^6.12.4",
+    "stripe": "^18.5.0",
     "tailwind-merge": "^3.3.1",
     "three": "^0.184.0",
     "three-stdlib": "^2.36.1",

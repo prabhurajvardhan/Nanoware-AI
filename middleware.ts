@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
   // this HttpOnly Firebase session cookie with the Admin SDK.
   const sessionCookie = request.cookies.get('__session')?.value;
   
-  const protectedRoutes = ['/revenue-loss-calculator', '/dashboard', '/reports', '/client-portal'];
+  const protectedRoutes = ['/revenue-loss-calculator', '/dashboard', '/reports', '/client-portal', '/billing', '/businesses/onboarding'];
   const isProtectedRoute = protectedRoutes.some(route => request.nextUrl.pathname.startsWith(route));
 
   if (isProtectedRoute && !sessionCookie) {
@@ -25,5 +25,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/revenue-loss-calculator/:path*', '/dashboard/:path*', '/reports/:path*', '/client-portal/:path*', '/login'],
+  matcher: ['/revenue-loss-calculator/:path*', '/dashboard/:path*', '/reports/:path*', '/client-portal/:path*', '/billing/:path*', '/businesses/onboarding/:path*', '/login'],
 };

@@ -15,6 +15,11 @@ function authMessage(error: unknown) {
   return 'Authentication failed. Please try again.';
 }
 
+function errorMessage(error: unknown) {
+  if (error instanceof Error && /^(Authentication service|Authentication failed|Unable to establish|Recent sign-in|Invalid request|Invalid session)/.test(error.message)) return error.message;
+  return authMessage(error);
+}
+
 function safeRedirect(value: string | null) {
   return value && value.startsWith('/') && !value.startsWith('//') ? value : '/dashboard';
 }
@@ -36,9 +41,13 @@ function LoginContent() {
       body: JSON.stringify({ idToken }),
     });
     if (!sessionResponse.ok) {
+      const payload = await sessionResponse.json().catch(() => null) as { error?: unknown } | null;
+      const serverMessage = typeof payload?.error === 'string' ? payload.error : '';
+      if (serverMessage) throw new Error(serverMessage);
       if (sessionResponse.status === 503) throw new Error('Authentication service is temporarily unavailable. Please try again later.');
       throw new Error('Unable to establish a secure session. Please try again.');
     }
+    setError('');
     if (isNewUser) {
       router.push('/businesses/onboarding');
       return;
@@ -57,7 +66,7 @@ function LoginContent() {
     try {
       const result = await signInWithPopup(auth, new GoogleAuthProvider());
       await finishAuth(await result.user.getIdToken(), getAdditionalUserInfo(result)?.isNewUser === true);
-    } catch (cause) { setError(cause instanceof Error && cause.message.startsWith('Authentication service') ? cause.message : authMessage(cause)); setLoading(false); }
+    } catch (cause) { setError(errorMessage(cause)); setLoading(false); }
   };
 
   const handleAuth = async (event: React.FormEvent) => {
@@ -76,7 +85,7 @@ function LoginContent() {
       }
       await finishAuth(await userCredential.user.getIdToken(), !isLogin);
     } catch (cause) {
-      setError(cause instanceof Error && (cause.message.startsWith('Unable') || cause.message.startsWith('Authentication service')) ? cause.message : authMessage(cause));
+      setError(errorMessage(cause));
       setLoading(false);
     }
   };

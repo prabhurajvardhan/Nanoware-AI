@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth, firestoreDb } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { PageTransition } from '@/components/PageTransition';
 import { sendAcceptedEmailAction } from './actions';
 import AdminLogin from './AdminLogin';
@@ -72,18 +71,10 @@ export default function AdminDashboard() {
       setLoading(true);
       setErrorDetails('');
       try {
-        const q = query(
-          collection(firestoreDb, 'requests'),
-          orderBy('createdAt', 'desc')
-        );
-        
-        const querySnapshot = await getDocs(q);
-        const fetched = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        
-        setRequests(fetched);
+        const response = await fetch('/api/admin/requests');
+        if (!response.ok) throw new Error('Insufficient permissions.');
+        const payload = await response.json();
+        setRequests(Array.isArray(payload.requests) ? payload.requests : []);
       } catch (err: any) {
         console.error(err);
         setErrorDetails(err.message || "Insufficient permissions.");

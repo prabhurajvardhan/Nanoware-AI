@@ -51,7 +51,9 @@ service cloud.firestore {
       // Public intake is mediated by /api/requests so validation and
       // idempotency are enforced before Admin SDK persistence.
       allow create: if false;
-      allow read, update, delete: if isAdmin();
+      // Sensitive request records are read and mutated only through MFA-gated
+      // server routes using the Admin SDK.
+      allow read, update, delete: if false;
     }
 
     match /admins/{userId} {

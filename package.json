@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test:security": "node --experimental-strip-types --test test/security-regression.test.mjs test/security-integration.test.mjs",
+    "test:security": "node --experimental-strip-types --test test/security-regression.test.mjs test/security-integration.test.mjs test/batch3-regression.test.mjs",
     "clean": "next clean"
   },
   "dependencies": {

@@ -7,7 +7,7 @@ import { WebsiteCrawler, discoverBusinessInfo, analyzeDesign, analyzeResponsive,
 import { analyzeLeadCapture, analyzeAIReadiness, analyzeCustomerJourney, generateOpportunities, calculateWebsiteScores, calculateOpportunityScores, generateExecutiveSummary, generateRoadmap, generatePricing } from '@/lib/audit/analyzer';
 import { AuditReport, AuditRequest } from '@/lib/audit/types';
 import { normalizeEmail } from '@/lib/security/validation.mjs';
-import { getAuditById, getRecentAudits, saveAudit } from '@/lib/firebase/auditService';
+import { getAuditById, saveAudit } from '@/lib/firebase/auditService';
 import { acquireLocalConcurrency, enforceRateLimit, rateLimitResponse, trustedClientKey } from '@/lib/security/rate-limit';
 
 // Generate unique audit ID
@@ -15,10 +15,15 @@ function generateAuditId(): string {
   return `audit_${Date.now()}_${crypto.randomUUID().replaceAll('-', '').slice(0, 16)}`;
 }
 
+function hashShareToken(token: string) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
 // POST /api/audit - Start a new audit
 export async function POST(request: NextRequest) {
-  const release = acquireLocalConcurrency();
+  let release: (() => void) | undefined;
   try {
+    release = acquireLocalConcurrency();
     await enforceRateLimit(trustedClientKey(request, 'audit'), 3, 15 * 60 * 1000);
     const body: unknown = await request.json();
     if (!body || typeof body !== 'object') {
@@ -52,18 +57,19 @@ export async function POST(request: NextRequest) {
 
     // Create audit
     const auditId = generateAuditId();
+    const shareToken = crypto.randomBytes(32).toString('hex');
     console.log(`Starting audit ${auditId} for ${targetUrl}`);
 
     // Start audit process (in production, this would be a background job)
     const report = await runAudit(auditId, targetUrl, normalizedEmail);
 
-    await saveAudit(report);
+    await saveAudit(report, hashShareToken(shareToken));
 
     return NextResponse.json({
       id: auditId,
       url: targetUrl,
       status: 'complete',
-      shareableLink: `/audit/${auditId}`,
+      shareableLink: `/audit/${auditId}?share=${shareToken}`,
       createdAt: report.createdAt,
     });
   } catch (error) {
@@ -72,7 +78,7 @@ export async function POST(request: NextRequest) {
     console.error('Audit error:', error instanceof Error ? error.message : 'unknown error');
     return NextResponse.json({ error: 'Unable to complete the audit.' }, { status: 502 });
   } finally {
-    release();
+    release?.();
   }
 }
 
@@ -80,9 +86,10 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const auditId = searchParams.get('id');
+  const shareToken = searchParams.get('share');
 
   if (auditId) {
-    const report = await getAuditById(auditId);
+    const report = shareToken ? await getAuditById(auditId, shareToken) : null;
     if (!report) {
       return NextResponse.json(
         { error: 'Audit not found' },
@@ -92,16 +99,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(report);
   }
 
-  const reports = await getRecentAudits(20);
-  const audits = reports.map((report) => ({
-    id: report.id,
-    url: report.url,
-    businessName: report.businessName,
-    createdAt: report.createdAt,
-    score: report.websiteScore.overall,
-  }));
-
-  return NextResponse.json({ audits });
+  return NextResponse.json({ error: 'An audit identifier is required.' }, { status: 400 });
 }
 
 // Run the complete audit process

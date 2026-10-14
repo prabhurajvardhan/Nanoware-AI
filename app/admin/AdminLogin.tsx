@@ -125,6 +125,7 @@ export default function AdminLogin({ onComplete, currentUser }: AdminLoginProps)
   };
   
   const handleLogout = async () => {
+    await fetch('/api/auth/session', { method: 'DELETE' }).catch(() => undefined);
     await signOut(auth);
     setStep('password');
     setEmail('');

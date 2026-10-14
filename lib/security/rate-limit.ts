@@ -2,15 +2,8 @@ import crypto from 'node:crypto';
 import type { NextRequest } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb } from '@/lib/firebase-admin';
-
-const LOCAL_LIMIT = 32;
-let activeLocalRequests = 0;
-
-export class RateLimitError extends Error {
-  constructor(public readonly retryAfterSeconds: number) {
-    super('RATE_LIMITED');
-  }
-}
+import { RateLimitError } from './concurrency.mjs';
+export { acquireLocalConcurrency, RateLimitError, rateLimitResponse } from './concurrency.mjs';
 
 export function trustedClientKey(request: NextRequest, scope: string) {
   const forwarded = request.headers.get('x-forwarded-for');
@@ -32,25 +25,5 @@ export async function enforceRateLimit(key: string, maxAttempts: number, windowM
     const count = Number(snapshot.data()?.count || 0);
     if (count >= maxAttempts) throw new RateLimitError(Math.ceil(((bucket + 1) * windowMs - now) / 1000));
     transaction.set(ref, { count: count + 1, scopeHash: digest(key), bucket, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-  });
-}
-
-export function acquireLocalConcurrency() {
-  if (activeLocalRequests >= LOCAL_LIMIT) throw new RateLimitError(5);
-  activeLocalRequests += 1;
-  let released = false;
-  return () => {
-    if (!released) {
-      released = true;
-      activeLocalRequests = Math.max(0, activeLocalRequests - 1);
-    }
-  };
-}
-
-export function rateLimitResponse(error: unknown) {
-  if (!(error instanceof RateLimitError)) return null;
-  return new Response(JSON.stringify({ error: 'Too many requests. Please retry later.' }), {
-    status: 429,
-    headers: { 'content-type': 'application/json', 'retry-after': String(error.retryAfterSeconds) },
   });
 }

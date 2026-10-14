@@ -19,23 +19,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      if (u) {
-        try {
-          const token = await u.getIdToken();
-          const response = await fetch('/api/auth/session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken: token }),
-          });
-          if (!response.ok) await auth.signOut();
-        } catch (error) {
-          console.error('Unable to establish authenticated session:', error);
-          await auth.signOut();
-        }
-      } else {
-        await fetch('/api/auth/session', { method: 'DELETE' }).catch(() => undefined);
-      }
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
     });

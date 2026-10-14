@@ -3,11 +3,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '@/lib/firebase';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '@/lib/firestore-errors';
 import clsx from 'clsx';
 import { CheckCircle2, Circle, Clock, ExternalLink, MessageSquare, Send } from 'lucide-react';
-import { useAuth } from '@/components/AuthProvider';
 
 export default function DashboardContent({ project }: { project: any }) {
   const [steps, setSteps] = useState<any[]>([]);
@@ -15,7 +14,6 @@ export default function DashboardContent({ project }: { project: any }) {
   const [activeStep, setActiveStep] = useState<any>(null);
   const [feedback, setFeedback] = useState('');
   const [loadingMsg, setLoadingMsg] = useState(false);
-  const { user } = useAuth();
 
   useEffect(() => {
     if (!project?.id) return;
@@ -51,14 +49,18 @@ export default function DashboardContent({ project }: { project: any }) {
     
     setLoadingMsg(true);
     try {
-      await addDoc(collection(db, `projects/${project.id}/activities`), {
-        projectId: project.id,
-        message: `Client Feedback: ${feedback}`,
-        createdAt: serverTimestamp()
+      const response = await fetch(`/api/business/projects/${encodeURIComponent(project.id)}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: feedback }),
       });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || 'Unable to send feedback.');
+      }
       setFeedback('');
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, `projects/${project.id}/activities`);
+      console.error('Feedback submission failed:', error);
     } finally {
       setLoadingMsg(false);
     }

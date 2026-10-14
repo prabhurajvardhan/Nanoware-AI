@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { firestoreDb } from '@/lib/firebase';
 import { PageTransition } from '@/components/PageTransition';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -11,7 +9,6 @@ import {
   MessagesSquare, Cloud, Zap, Shield, Image as ImageIcon 
 } from 'lucide-react';
 import clsx from 'clsx';
-import { sendSolutionRequestEmails } from '@/lib/email/actions';
 
 enum OperationType {
   CREATE = 'create',
@@ -46,6 +43,7 @@ export default function Contact() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
 
   // Store all responses
   const [data, setData] = useState<Record<string, any>>({
@@ -77,8 +75,6 @@ export default function Contact() {
     setIsSubmitting(true);
     setErrorMsg('');
     try {
-      const requestsRef = collection(firestoreDb, 'requests');
-      
       let description = '';
       let budget = '';
 
@@ -94,32 +90,17 @@ export default function Contact() {
         name: data.contactName,
         email: data.contactEmail,
         company: data.contactCompany || '',
-        projectType: flow === 'web' ? 'Web Development' : 'AI Services',
-        budget: budget,
-        description: description,
-        status: 'pending',
-        createdAt: serverTimestamp(),
+        service: flow === 'web' ? 'Web Development' : 'AI Services',
+        details: description,
+        idempotencyKey,
       };
 
-      await addDoc(requestsRef, payload);
-      
-      // Attempt to send email notifications
-      try {
-        const emailResult = await sendSolutionRequestEmails(
-          data.contactEmail,
-          data.contactName,
-          flow === 'web' ? 'Web Development' : 'AI Services',
-          description
-        );
-        
-        if (emailResult && !emailResult.success) {
-          console.error('Email action failed:', emailResult.error);
-          throw new Error(`Email delivery system failed: ${emailResult.error}`);
-        }
-      } catch (emailError: any) {
-        console.error('Failed to send request emails:', emailError);
-        throw emailError; // Re-throw to be caught by the outer catch
-      }
+      const response = await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, company: payload.company || '' }),
+      });
+      if (!response.ok && response.status !== 202) throw new Error('REQUEST_FAILED');
       
       setSuccess(true);
     } catch (error) {

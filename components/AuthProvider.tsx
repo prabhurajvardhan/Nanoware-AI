@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
@@ -21,10 +21,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       if (u) {
-        const token = await u.getIdToken();
-        document.cookie = `authToken=${token}; path=/; max-age=86400; SameSite=Lax`;
+        try {
+          const token = await u.getIdToken();
+          const response = await fetch('/api/auth/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken: token }),
+          });
+          if (!response.ok) await auth.signOut();
+        } catch (error) {
+          console.error('Unable to establish authenticated session:', error);
+          await auth.signOut();
+        }
       } else {
-        document.cookie = "authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+        await fetch('/api/auth/session', { method: 'DELETE' }).catch(() => undefined);
       }
       setUser(u);
       setLoading(false);
@@ -34,19 +44,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      await fetch('/api/auth/session', { method: 'DELETE' });
       await auth.signOut();
       router.push('/login');
-    } catch (err) {
-      console.error("Error signing out", err);
+    } catch (error) {
+      console.error('Error signing out:', error instanceof Error ? error.message : 'unknown error');
     }
   };
 
-  return (
-    <AuthContext.Provider value={{ user, loading, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, loading, logout }}>{children}</AuthContext.Provider>;
 }
 
 export const useAuth = () => useContext(AuthContext);
-

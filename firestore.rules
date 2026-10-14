@@ -48,7 +48,9 @@ service cloud.firestore {
     }
 
     match /requests/{requestId} {
-      allow create: if true;
+      // Public intake is mediated by /api/requests so validation and
+      // idempotency are enforced before Admin SDK persistence.
+      allow create: if false;
       allow read, update, delete: if isAdmin();
     }
 

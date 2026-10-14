@@ -1,3 +1,5 @@
+import { escapeHtml } from '@/lib/security/validation.mjs';
+
 export const EMAIL_STYLES = `
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -163,11 +165,11 @@ export const baseLayout = (content: string) => `
 export function welcomeEmailTemplate(name: string, url: string) {
   return baseLayout(`
     <h1>Welcome to Nanoware AI.</h1>
-    <p>Hello ${name},</p>
+    <p>Hello ${escapeHtml(name)},</p>
     <p>Thank you for creating an account. Our platform bridges the gap between inefficient manual processes and high-performance intelligent systems.</p>
     <p>We build production-ready AI solutions designed to reclaim lost revenue and automate complex workflows.</p>
     <div class="button-container">
-      <a href="${url}/revenue-loss-calculator" class="button">Calculate Revenue Loss</a>
+      <a href="${escapeHtml(url)}/revenue-loss-calculator" class="button">Calculate Revenue Loss</a>
     </div>
     <p>If you have any initial questions or require immediate support, reply directly to this email.</p>
     <p>Best regards,<br>The Nanoware AI Team</p>
@@ -176,20 +178,20 @@ export function welcomeEmailTemplate(name: string, url: string) {
 
 export function authEmailTemplate(title: string, message: string, code?: string, actionUrl?: string, actionText?: string) {
   return baseLayout(`
-    <h1>${title}</h1>
-    <p>${message}</p>
+    <h1>${escapeHtml(title)}</h1>
+    <p>${escapeHtml(message)}</p>
     
     ${code ? `
       <div class="highlight-box" style="text-align: center;">
         <div class="highlight-label">Security Code</div>
-        <div class="highlight-value" style="letter-spacing: 4px;">${code}</div>
+        <div class="highlight-value" style="letter-spacing: 4px;">${escapeHtml(code)}</div>
         <p class="text-sm" style="margin-bottom: 0;">This code will expire in 15 minutes.</p>
       </div>
     ` : ''}
     
     ${actionUrl && actionText ? `
       <div class="button-container">
-        <a href="${actionUrl}" class="button">${actionText}</a>
+        <a href="${escapeHtml(actionUrl)}" class="button">${escapeHtml(actionText)}</a>
       </div>
     ` : ''}
     
@@ -202,7 +204,7 @@ export function revenueReportEmailTemplate(data: { name: string, loss: number, r
   
   return baseLayout(`
     <h1>Your Revenue Analysis Report</h1>
-    <p>Hello ${data.name},</p>
+    <p>Hello ${escapeHtml(data.name)},</p>
     <p>Your recent assessment via our Revenue Loss Calculator is complete. The results indicate significant potential for optimization.</p>
     
     <div class="highlight-box">
@@ -220,9 +222,9 @@ export function revenueReportEmailTemplate(data: { name: string, loss: number, r
     <p>Manual processing delays and unoptimized follow-ups are creating compounding inefficiencies within your sales funnel. Implementing automated context-aware agents can recover up to 75% of these dropped leads.</p>
     
     <div class="button-container">
-      <a href="${data.url}/revenue-loss-calculator/report" class="button">View Full Report</a>
+      <a href="${escapeHtml(data.url)}/revenue-loss-calculator/report" class="button">View Full Report</a>
       <br>
-      <a href="${data.url}/contact" class="button-dark">Request Custom Solution</a>
+      <a href="${escapeHtml(data.url)}/contact" class="button-dark">Request Custom Solution</a>
     </div>
   `);
 }
@@ -230,11 +232,11 @@ export function revenueReportEmailTemplate(data: { name: string, loss: number, r
 export function welcomeBackEmailTemplate(name: string, url: string) {
   return baseLayout(`
     <h1>Welcome Back!</h1>
-    <p>Hello ${name},</p>
+    <p>Hello ${escapeHtml(name)},</p>
     <p>We noticed a new login to your Nanoware AI account. We're glad to see you back.</p>
     <p>Access your dashboard to check the latest updates to your projects, review reports, or request new AI solutions to further optimize your workflows.</p>
     <div class="button-container">
-      <a href="${url}/dashboard" class="button">Go to Dashboard</a>
+      <a href="${escapeHtml(url)}/dashboard" class="button">Go to Dashboard</a>
     </div>
     <p>If this login wasn't you, please secure your account immediately.</p>
   `);
@@ -243,8 +245,8 @@ export function welcomeBackEmailTemplate(name: string, url: string) {
 export function requestAcceptedTemplate(name: string, service: string, url: string) {
   return baseLayout(`
     <h1>Solution Request Accepted</h1>
-    <p>Hello ${name},</p>
-    <p>Great news! Your request for the <strong>${service}</strong> solution has been reviewed and accepted by our engineering team.</p>
+    <p>Hello ${escapeHtml(name)},</p>
+    <p>Great news! Your request for the <strong>${escapeHtml(service)}</strong> solution has been reviewed and accepted by our engineering team.</p>
     
     <h2>What happens next?</h2>
     <p>You can now track the progress of your new solution directly from your dashboard. Our systems will automatically provision the necessary initial resources, and our team will begin the architecture phase.</p>
@@ -257,7 +259,7 @@ export function requestAcceptedTemplate(name: string, service: string, url: stri
     </div>
     
     <div class="button-container">
-      <a href="${url}/dashboard" class="button">View Dashboard</a>
+      <a href="${escapeHtml(url)}/dashboard" class="button">View Dashboard</a>
     </div>
     
     <p>We are excited to build this solution for you. If you have any further details to add, feel free to reply to this email.</p>
@@ -267,8 +269,8 @@ export function requestAcceptedTemplate(name: string, service: string, url: stri
 export function requestSolutionUserTemplate(name: string, service: string) {
   return baseLayout(`
     <h1>Request Received</h1>
-    <p>Hello ${name},</p>
-    <p>We have successfully received your request for a <strong>${service}</strong> solution.</p>
+    <p>Hello ${escapeHtml(name)},</p>
+    <p>We have successfully received your request for a <strong>${escapeHtml(service)}</strong> solution.</p>
     <p>Our engineering team will review your requirements and follow up within 24 business hours to discuss architecture, timelines, and next steps.</p>
     
     <table class="data-table">
@@ -294,15 +296,15 @@ export function requestSolutionAdminTemplate(data: { name: string, email: string
     <table class="data-table">
       <tr>
         <th>Client Name</th>
-        <td>${data.name}</td>
+        <td>${escapeHtml(data.name)}</td>
       </tr>
       <tr>
         <th>Client Email</th>
-        <td><a href="mailto:${data.email}" style="color: #3B82F6;">${data.email}</a></td>
+        <td><a href="mailto:${escapeHtml(data.email)}" style="color: #3B82F6;">${escapeHtml(data.email)}</a></td>
       </tr>
       <tr>
         <th>Requested Service</th>
-        <td>${data.service}</td>
+        <td>${escapeHtml(data.service)}</td>
       </tr>
       ${data.estimatedLoss ? `
       <tr>
@@ -314,7 +316,7 @@ export function requestSolutionAdminTemplate(data: { name: string, email: string
     
     <h2>Request Details</h2>
     <div style="background-color: #0F172A; padding: 16px; border-radius: 8px; border: 1px solid #334155; font-size: 14px; color: #CBD5E1;">
-      ${data.details}
+      ${escapeHtml(data.details)}
     </div>
   `);
 }
@@ -335,8 +337,8 @@ export function paymentEmailTemplate(data: { type: 'success' | 'failed' | 'invoi
   }
 
   return baseLayout(`
-    <h1>${title}</h1>
-    <p>${message}</p>
+    <h1>${escapeHtml(title)}</h1>
+    <p>${escapeHtml(message)}</p>
     
     <div class="highlight-box" style="${isFailed ? 'background-color: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2);' : ''}">
       <div class="highlight-label">Transaction Amount</div>
@@ -371,7 +373,7 @@ export function adminNotificationTemplate(title: string, eventType: string, summ
   `).join('');
 
   return baseLayout(`
-    <h1>${title}</h1>
+    <h1>${escapeHtml(title)}</h1>
     <div style="background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3B82F6; padding: 12px 16px; margin-bottom: 24px; font-weight: 600; color: #60A5FA;">
       SYSTEM EVENT: ${eventType.toUpperCase()}
     </div>

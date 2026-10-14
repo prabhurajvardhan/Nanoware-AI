@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, firestoreDb } from '@/lib/firebase';
 import { PageTransition } from '@/components/PageTransition';
@@ -48,10 +48,7 @@ export default function AdminDashboard() {
     try {
       setProcessingId(req.id);
       
-      const reqRef = doc(firestoreDb, 'requests', req.id);
-      await updateDoc(reqRef, { status: 'accepted' });
-      
-      const emailResult = await sendAcceptedEmailAction(req.email, req.name, req.projectType || 'Custom Solution');
+      const emailResult = await sendAcceptedEmailAction(req.id);
       if (emailResult && !emailResult.success) {
         throw new Error(`Email sending failed: ${emailResult.error}`);
       }

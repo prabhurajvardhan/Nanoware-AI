@@ -1,69 +1,109 @@
 'use server';
 
-import { getFirestore } from 'firebase-admin/firestore';
+import crypto from 'node:crypto';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getFirebaseAdminApp } from '@/lib/firebase-admin';
 import { sendAdminOtpEmail } from '@/lib/email/actions';
+import { requireAdminActor } from '@/lib/auth/server';
+import { enforceRateLimit } from '@/lib/security/rate-limit';
+
+const OTP_TTL_MS = 10 * 60 * 1000;
+const RESEND_WINDOW_MS = 60 * 1000;
+const MAX_ATTEMPTS = 5;
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+function hash(value: string) {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+function createOtp() {
+  return crypto.randomInt(100000, 1000000).toString();
+}
 
 export async function requestAdminOtpAction(email: string) {
   try {
-    const adminApp = getFirebaseAdminApp();
-    const db = getFirestore(adminApp);
-    
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // Clean email for document ID
-    const docId = email.toLowerCase().replace(/[^a-z0-9]/g, '_');
-    
-    // Store in Firestore with an expiration time of 10 minutes
-    await db.collection('admin_otps').doc(docId).set({
-      otp,
-      expiresAt: Date.now() + 10 * 60 * 1000,
-      email
+    const actor = await requireAdminActor();
+    const requestedEmail = normalizeEmail(email);
+    if (!requestedEmail || requestedEmail !== normalizeEmail(actor.email || '')) {
+      return { success: false, error: 'Unable to start verification.' };
+    }
+    await enforceRateLimit(`admin-otp:${actor.uid}`, 3, 15 * 60 * 1000);
+
+    const db = getFirestore(getFirebaseAdminApp());
+    const otp = createOtp();
+    const challengeId = crypto.randomBytes(24).toString('hex');
+    const challengeRef = db.collection('admin_otp_challenges').doc(challengeId);
+    const rateRef = db.collection('admin_otp_rate').doc(hash(requestedEmail));
+    const now = Date.now();
+
+    await db.runTransaction(async (transaction) => {
+      const rateDoc = await transaction.get(rateRef);
+      const lastSentAt = Number(rateDoc.data()?.lastSentAt || 0);
+      if (lastSentAt && now - lastSentAt < RESEND_WINDOW_MS) throw new Error('RATE_LIMITED');
+      transaction.set(rateRef, { lastSentAt: now, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      transaction.set(challengeRef, {
+        emailHash: hash(requestedEmail),
+        otpHash: hash(otp),
+        expiresAt: now + OTP_TTL_MS,
+        attempts: 0,
+        consumed: false,
+        createdAt: FieldValue.serverTimestamp(),
+      });
     });
 
-    // Send the email
-    const emailResult = await sendAdminOtpEmail(email, otp);
+    const emailResult = await sendAdminOtpEmail(requestedEmail, otp);
     if (!emailResult.success) {
-      throw new Error(emailResult.error as string);
+      await challengeRef.delete().catch(() => undefined);
+      throw new Error('EMAIL_DELIVERY_FAILED');
     }
 
-    return { success: true };
-  } catch (error: any) {
-    console.error('Error in requestAdminOtpAction:', error);
-    return { success: false, error: error.message };
+    return { success: true, challengeId };
+  } catch (error) {
+    console.error('Admin OTP request failed:', error instanceof Error ? error.message : 'unknown error');
+    return { success: false, error: 'Unable to start verification. Please try again later.' };
   }
 }
 
-export async function verifyAdminOtpAction(email: string, code: string) {
+export async function verifyAdminOtpAction(challengeId: string, code: string) {
   try {
-    const adminApp = getFirebaseAdminApp();
-    const db = getFirestore(adminApp);
-    
-    const docId = email.toLowerCase().replace(/[^a-z0-9]/g, '_');
-    const otpRef = db.collection('admin_otps').doc(docId);
-    const otpDoc = await otpRef.get();
-    
-    if (!otpDoc.exists) {
-      return { success: false, error: 'OTP not found. Please request a new one.' };
-    }
-    
-    const data = otpDoc.data();
-    
-    if (data?.expiresAt < Date.now()) {
-      return { success: false, error: 'OTP has expired. Please request a new one.' };
-    }
-    
-    if (data?.otp !== code) {
+    const actor = await requireAdminActor();
+    if (!/^[a-f0-9]{48}$/.test(challengeId) || !/^\d{6}$/.test(code)) {
       return { success: false, error: 'Invalid verification code.' };
     }
-    
-    // Valid OTP - clean it up
-    await otpRef.delete();
-    
-    return { success: true };
-  } catch (error: any) {
-    console.error('Error in verifyAdminOtpAction:', error);
-    return { success: false, error: error.message };
+
+    const db = getFirestore(getFirebaseAdminApp());
+    const challengeRef = db.collection('admin_otp_challenges').doc(challengeId);
+    const now = Date.now();
+    const result = await db.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(challengeRef);
+      const data = snapshot.data();
+      if (!snapshot.exists || !data || data.consumed || Number(data.expiresAt) < now) {
+        if (snapshot.exists) transaction.delete(challengeRef);
+        return false;
+      }
+      if (data.emailHash !== hash(normalizeEmail(actor.email || ''))) {
+        transaction.delete(challengeRef);
+        return false;
+      }
+      const attempts = Number(data.attempts || 0) + 1;
+      if (attempts > MAX_ATTEMPTS) {
+        transaction.delete(challengeRef);
+        return false;
+      }
+      if (data.otpHash !== hash(code)) {
+        transaction.update(challengeRef, { attempts });
+        return false;
+      }
+      transaction.delete(challengeRef);
+      return true;
+    });
+
+    return result ? { success: true } : { success: false, error: 'Invalid or expired verification code.' };
+  } catch (error) {
+    console.error('Admin OTP verification failed:', error instanceof Error ? error.message : 'unknown error');
+    return { success: false, error: 'Unable to verify the code. Please try again later.' };
   }
 }

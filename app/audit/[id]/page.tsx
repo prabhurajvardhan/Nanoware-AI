@@ -22,125 +22,6 @@ import {
 import { downloadAuditPDF } from '@/components/audit/PDFDownload';
 import type { AuditReport } from '@/lib/audit/types';
 
-function generateMockAuditData(id: string): AuditReport {
-  return {
-    id,
-    url: 'https://example-company.com',
-    businessName: 'Example Company Inc.',
-    industry: 'Technology Services',
-    createdAt: new Date(),
-    phases: {
-      discovery: true, research: true, leadCapture: true, aiReadiness: true,
-      customerJourney: true, opportunities: true, decisionMakers: true,
-      scoring: true, roadmap: true, report: true,
-    },
-    businessInfo: {
-      name: 'Example Company Inc.', industry: 'Technology Services',
-      description: 'A technology services company.',
-      locations: ['San Francisco, CA'], phone: '+1 (555) 123-4567',
-      email: 'contact@example.com', socialMedia: {},
-    },
-    websiteAnalysis: {
-      design: { score: 65, issues: [], strengths: ['Modern layout'] },
-      responsive: { score: 70, isResponsive: true, mobileFriendly: true },
-      loadingSpeed: { score: 52, timeInSeconds: 4.2, grade: 'D' as const },
-      navigation: { score: 58, issues: [], menuDepth: 4, hasBreadcrumbs: false },
-      brokenLinks: { score: 80, links: [] as { url: string; status: number }[] },
-      forms: { count: 2, issues: [], hasValidation: true, hasProgressiveProfiling: false },
-      chatWidget: { present: false, type: 'none' as const },
-      newsletter: { present: true, embedded: true, popup: false },
-      blog: { present: true, postCount: 12, freshness: 'Recent' },
-      accessibility: { score: 48, issues: [], wcagLevel: 'None' as const },
-      seo: { score: 68, issues: [], hasMetaTags: true, hasOpenGraph: true, hasSitemap: false, hasRobotsTxt: false },
-      trustSignals: { score: 65, hasSSL: true, hasPrivacyPolicy: true, hasTermsOfService: true, hasTrustBadges: [], hasTestimonials: true },
-    },
-    leadCapture: {
-      contactForm: { present: true, fields: ['name', 'email', 'message'], hasSpamProtection: true },
-      phone: { present: true, clickToCall: true },
-      whatsapp: { present: false },
-      messenger: { present: false },
-      booking: { present: false, type: 'none' as const },
-      crm: { present: false },
-      chatbot: { present: false, type: 'none' as const },
-      emailCapture: { present: true, type: 'inline' as const },
-      leadQualification: { level: 'basic' as const, criteria: ['Email'] },
-      leadRouting: { present: false, type: 'unknown' as const },
-      responseExperience: { score: 40, autoResponder: false, estimatedResponseTime: 'Unknown' },
-    },
-    aiReadiness: {
-      aiChatbot: { present: false, features: [] },
-      ruleBasedChatbot: { present: false, provider: undefined },
-      liveChat: { present: false, provider: undefined },
-      propertyRecommendation: { present: false, type: 'none' as const },
-      bookingAI: { present: false, features: [] },
-      voiceAI: { present: false, type: 'none' as const },
-      leadQualificationAI: { present: false, features: [] },
-      knowledgeBase: { present: false, searchable: false, articleCount: 0 },
-      personalization: { present: false, basedOn: [] },
-      customerMemory: { present: false, features: [] },
-      overallScore: 20, maturityLevel: 'None' as const,
-    },
-    customerJourney: {
-      steps: [
-        { name: 'Landing', path: '/', friction: 'low' as const, issues: [], dropOffRisk: 'low' as const },
-        { name: 'Browse', path: '/services', friction: 'medium' as const, issues: [], dropOffRisk: 'medium' as const },
-        { name: 'Contact', path: '/contact', friction: 'medium' as const, issues: [], dropOffRisk: 'medium' as const },
-        { name: 'Conversion', path: '/', friction: 'high' as const, issues: [], dropOffRisk: 'high' as const },
-      ],
-      overallFlow: {
-        score: 55, deadEnds: [], brokenFlows: [], slowResponses: [], missingCTAs: [], unclearNavigation: [],
-      },
-    },
-    opportunities: [
-      {
-        id: 'opp-1', category: 'lead-capture' as const,
-        observation: 'No chatbot available.', businessImpact: 'Visitors cannot get answers.',
-        recommendation: 'Deploy AI chatbot.', priority: 'High' as const,
-        estimatedEffort: '1-2 weeks' as const, estimatedValue: 'High' as const,
-        evidence: [], relatedScores: [],
-      },
-      {
-        id: 'opp-2', category: 'ai-readiness' as const,
-        observation: 'No AI features.', businessImpact: 'Limited automation.',
-        recommendation: 'Implement AI chatbot.', priority: 'High' as const,
-        estimatedEffort: '2-4 weeks' as const, estimatedValue: 'High' as const,
-        evidence: [], relatedScores: [],
-      },
-      {
-        id: 'opp-3', category: 'automation' as const,
-        observation: 'Manual follow-up.', businessImpact: 'Slow responses.',
-        recommendation: 'Automate lead nurturing.', priority: 'Medium' as const,
-        estimatedEffort: '2-4 weeks' as const, estimatedValue: 'Medium' as const,
-        evidence: [], relatedScores: [],
-      },
-    ],
-    decisionMakers: [],
-    websiteScore: {
-      overall: 58, ux: 62, performance: 52, leadCapture: 45, automation: 30,
-      aiReadiness: 20, seo: 68, content: 72, trust: 65, grade: 'D' as const,
-      benchmarks: { industryAverage: 55, competitorAverage: 62, topPerformer: 85 },
-    },
-    opportunityScore: { critical: 0, high: 2, medium: 1, low: 0, total: 3 },
-    executiveSummary: {
-      overview: 'Example Company Inc. has significant opportunities in AI adoption and lead capture.',
-      strengths: ['Modern design', 'Active blog'], weaknesses: ['No chatbot', 'Slow load times'],
-      keyOpportunities: ['Deploy AI chatbot'], recommendedNextSteps: ['Schedule consultation'],
-      riskFactors: ['Lost leads'],
-    },
-    roadmap: [
-      { phase: 1, title: 'AI Chatbot', items: ['Deploy chatbot'], timeline: '2-3 weeks', priority: 'High' as const },
-      { phase: 2, title: 'Automation', items: ['CRM integration'], timeline: '3-4 weeks', priority: 'High' as const },
-    ],
-    pricing: {
-      implementation: { low: 8500, medium: 12500, high: 18000, currency: 'USD' },
-      maintenance: { low: 500, medium: 800, high: 1200, currency: 'USD', period: 'monthly' as const },
-      recommendedPlan: 'Growth', timeline: '8-12 weeks',
-      includedFeatures: ['AI chatbot', 'CRM integration'],
-    },
-    shareableLink: `/audit/${id}`,
-  };
-}
-
 function ScoreRing({ score, size = 120, strokeWidth = 8 }: { score: number; size?: number; strokeWidth?: number }) {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
@@ -195,15 +76,14 @@ export default function AuditPage({ params }: { params: Promise<{ id: string }> 
           console.log('Audit data received:', data.businessName);
           setAuditData(data);
         } else if (response.status === 404) {
-          console.warn('Audit not found in API, using mock data');
-          setAuditData(generateMockAuditData(id));
+          setAuditData(null);
         } else {
-          console.error('API error:', response.status);
-          setAuditData(generateMockAuditData(id));
+          console.error('Audit API error:', response.status);
+          setAuditData(null);
         }
       } catch (error) {
         console.error('Fetch error:', error);
-        setAuditData(generateMockAuditData(id));
+        setAuditData(null);
       } finally {
         setIsLoading(false);
       }

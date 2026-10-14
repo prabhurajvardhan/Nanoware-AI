@@ -5,6 +5,7 @@ import fs from 'node:fs';
 const adminSource = fs.readFileSync(new URL('../lib/firebase-admin.ts', import.meta.url), 'utf8');
 const sessionSource = fs.readFileSync(new URL('../app/api/auth/session/route.ts', import.meta.url), 'utf8');
 const providerSource = fs.readFileSync(new URL('../components/AuthProvider.tsx', import.meta.url), 'utf8');
+const loginSource = fs.readFileSync(new URL('../app/login/page.tsx', import.meta.url), 'utf8');
 const firebaseConfig = JSON.parse(fs.readFileSync(new URL('../firebase-applet-config.json', import.meta.url), 'utf8'));
 
 test('Firebase client and Admin configuration target nanoware-ai consistently', () => {
@@ -28,6 +29,9 @@ test('production Firebase Admin initialization fails closed when the server cred
 test('session failures distinguish invalid credentials from infrastructure failures and keep cookies HttpOnly', () => {
   assert.match(sessionSource, /runtime = 'nodejs'/);
   assert.match(sessionSource, /dynamic = 'force-dynamic'/);
+  assert.match(sessionSource, /import\('firebase-admin\/auth'\)/);
+  assert.match(sessionSource, /import\('\@\/lib\/firebase-admin'\)/);
+  assert.match(sessionSource, /await import\('\@\/lib\/security\/rate-limit'\)/);
   assert.match(sessionSource, /isSameOrigin/);
   assert.match(sessionSource, /auth_time/);
   assert.match(sessionSource, /Authentication failed\.' \}, 401/);
@@ -41,4 +45,11 @@ test('session failures distinguish invalid credentials from infrastructure failu
 test('auth state observation does not create duplicate sessions from stale Firebase tokens', () => {
   assert.doesNotMatch(providerSource, /method: 'POST'/);
   assert.match(providerSource, /onAuthStateChanged\(auth, \(u\)/);
+});
+test('Google login clears stale errors, preserves session failures, and routes only after session creation', () => {
+  assert.match(loginSource, /setLoading\(true\); setError\('\'\)/);
+  assert.match(loginSource, /await sessionResponse\.json\(\)/);
+  assert.match(loginSource, /if \(serverMessage\) throw new Error\(serverMessage\)/);
+  assert.match(loginSource, /setError\('\'\);\s*if \(isNewUser\)/);
+  assert.match(loginSource, /router\.push\(access\.onboardingRequired \? '\/businesses\/onboarding' : redirectPath\)/);
 });

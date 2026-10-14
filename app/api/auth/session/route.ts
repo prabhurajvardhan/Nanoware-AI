@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import crypto from 'node:crypto';
-import { getAuth } from 'firebase-admin/auth';
-import { FirebaseAdminConfigurationError, getFirebaseAdminApp } from '@/lib/firebase-admin';
+import { acquireLocalConcurrency, rateLimitResponse } from '@/lib/security/concurrency.mjs';
 import { MFA_COOKIE, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from '@/lib/auth/server';
-import { enforceRateLimit, rateLimitResponse, trustedClientKey } from '@/lib/security/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -52,8 +50,7 @@ function firebaseErrorCode(error: unknown) {
 
 function isConfigurationFailure(error: unknown) {
   const value = error as SessionFailure;
-  return error instanceof FirebaseAdminConfigurationError
-    || value?.name === 'FirebaseAdminConfigurationError'
+  return value?.name === 'FirebaseAdminConfigurationError'
     || ['FIREBASE_SERVICE_ACCOUNT_JSON_MISSING', 'FIREBASE_SERVICE_ACCOUNT_JSON_INVALID', 'FIREBASE_PROJECT_MISMATCH'].includes(firebaseErrorCode(error));
 }
 
@@ -72,6 +69,13 @@ function isSameOrigin(request: NextRequest) {
   return true;
 }
 
+function trustedClientKey(request: NextRequest, scope: string) {
+  const forwarded = request.headers.get('x-forwarded-for');
+  const trustedProxy = process.env.TRUSTED_PROXY_IP_HEADER === 'x-forwarded-for';
+  const source = trustedProxy && forwarded ? forwarded.split(',')[0].trim() : 'untrusted-client';
+  return `${scope}:${source || 'unknown'}`;
+}
+
 function response(body: Record<string, unknown>, status: number, requestId: string) {
   const result = NextResponse.json(body, { status });
   result.headers.set('x-request-id', requestId);
@@ -80,6 +84,8 @@ function response(body: Record<string, unknown>, status: number, requestId: stri
 
 export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID();
+  let releaseConcurrency: (() => void) | undefined;
+  let persistentRateLimitResponse: ((error: unknown) => Response | null) | undefined;
   try {
     if (!isSameOrigin(request)) return response({ error: 'Invalid request origin.' }, 403, requestId);
 
@@ -92,8 +98,17 @@ export async function POST(request: NextRequest) {
     const idToken = body && typeof body === 'object' && 'idToken' in body && typeof body.idToken === 'string' ? body.idToken : '';
     if (!idToken || idToken.length > 20_000) return response({ error: 'Invalid session token.' }, 400, requestId);
 
-    // Rate-limit only explicit session establishment, after cheap request validation.
-    await enforceRateLimit(trustedClientKey(request, 'session'), 10, 15 * 60 * 1000);
+    // Keep a cheap local guard available even if a serverless dependency cannot load.
+    releaseConcurrency = acquireLocalConcurrency();
+    const rateLimit = await import('@/lib/security/rate-limit');
+    persistentRateLimitResponse = rateLimit.rateLimitResponse;
+    await rateLimit.enforceRateLimit(trustedClientKey(request, 'session'), 10, 15 * 60 * 1000);
+
+    // Load Firebase Admin only inside the request boundary so initialization failures are observable JSON errors.
+    const [{ getAuth }, { getFirebaseAdminApp }] = await Promise.all([
+      import('firebase-admin/auth'),
+      import('@/lib/firebase-admin'),
+    ]);
     const adminAuth = getAuth(getFirebaseAdminApp());
     const decoded = await adminAuth.verifyIdToken(idToken, true);
     if (!decoded.auth_time || Math.floor(Date.now() / 1000) - decoded.auth_time > MAX_RECENT_SIGN_IN_AGE_SECONDS) {
@@ -104,7 +119,7 @@ export async function POST(request: NextRequest) {
     result.cookies.set(SESSION_COOKIE, sessionCookie, cookieOptions);
     return result;
   } catch (error) {
-    const limited = rateLimitResponse(error);
+    const limited = persistentRateLimitResponse?.(error) ?? rateLimitResponse(error);
     if (limited) { limited.headers.set('x-request-id', requestId); return limited; }
     if (isConfigurationFailure(error)) {
       console.error('Session infrastructure configuration failure:', firebaseErrorCode(error) || 'unknown', requestId);
@@ -113,6 +128,8 @@ export async function POST(request: NextRequest) {
     if (isInvalidCredential(error)) return response({ error: 'Authentication failed.' }, 401, requestId);
     console.error('Session provider failure:', firebaseErrorCode(error) || 'unknown', requestId);
     return response({ error: 'Authentication service is temporarily unavailable.' }, 503, requestId);
+  } finally {
+    releaseConcurrency?.();
   }
 }
 

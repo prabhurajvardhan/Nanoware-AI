@@ -71,6 +71,33 @@ export default function Home() {
          </div>
       </section>
 
+      {/* For Businesses Section */}
+      <section className="border-t border-slate-100 bg-slate-50 px-6 py-20 md:px-12 md:py-24">
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-10 rounded-3xl bg-brand-secondary px-8 py-10 text-white md:flex-row md:items-center md:px-12 md:py-14">
+          <div className="max-w-2xl">
+            <div className="mb-5 inline-flex items-center gap-3">
+              <span className="h-px w-8 bg-brand-accent" />
+              <span className="font-heading text-sm font-medium uppercase tracking-widest text-brand-accent">For Businesses</span>
+            </div>
+            <h2 className="font-heading text-3xl font-medium tracking-tight md:text-4xl">
+              Keep your next build moving.
+            </h2>
+            <p className="mt-4 max-w-xl text-sm leading-relaxed text-slate-300 md:text-base">
+              Access your Nanoware AI workspace to follow projects, review progress, and share feedback with the team.
+            </p>
+          </div>
+          <Link
+            href="/businesses"
+            className="inline-flex shrink-0 items-center gap-3 rounded-full bg-white px-7 py-3.5 text-sm font-medium text-brand-secondary transition-colors hover:bg-slate-200"
+          >
+            Explore Business Tools
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M1 13L13 1M13 1H4.33333M13 1V9.66667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Link>
+        </div>
+      </section>
+
       {/* AI Growth Opportunity Audit Section */}
       <AuditSection />
 

@@ -9,16 +9,18 @@ import { motion } from 'framer-motion';
 import { sendWelcomeEmail, sendWelcomeBackEmail } from '@/lib/email/actions';
 
 function LoginContent() {
-  const [isLogin, setIsLogin] = useState(true);
+  const searchParams = useSearchParams();
+  const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
   const router = useRouter();
-  const searchParams = useSearchParams();
   const redirectParams = searchParams.get('redirect');
-  const redirectPath = redirectParams || '/dashboard';
+  const redirectPath = redirectParams && redirectParams.startsWith('/') && !redirectParams.startsWith('//')
+    ? redirectParams
+    : '/dashboard';
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();

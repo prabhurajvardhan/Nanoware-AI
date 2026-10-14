@@ -1,7 +1,7 @@
 # Roadmap Batch 4 — Release and Voice Foundation
 
 - **Branch:** `roadmap/implementation`
-- **Status:** Partial implementation; not merged, pushed, or deployed
+- **Status:** Partial implementation; pushed in PR #8, not merged or deployed
 - **Scope:** T015 and derived T016
 
 ## Implemented

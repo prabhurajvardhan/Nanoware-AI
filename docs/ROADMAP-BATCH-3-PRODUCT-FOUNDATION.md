@@ -1,7 +1,7 @@
 # Roadmap Batch 3 — Product and Operations Foundation
 
 - **Branch:** `roadmap/implementation`
-- **Status:** Partial implementation; not merged, pushed, or deployed
+- **Status:** Partial implementation; pushed in PR #8, not merged or deployed
 - **Scope:** T011, T012, T013, T014 provider-independent foundations
 
 ## Implemented

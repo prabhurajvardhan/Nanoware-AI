@@ -2,7 +2,7 @@
 
 - **Branch:** `roadmap/implementation`
 - **Base:** `d80e3e0` plus Batch 1 working changes
-- **Status:** Partial implementation; not merged, pushed, or deployed
+- **Status:** Partial implementation; pushed in PR #8, not merged or deployed
 - **Scope:** T007, T008, T009, T010 provider-independent foundations
 
 ## Implemented

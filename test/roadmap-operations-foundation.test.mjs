@@ -22,16 +22,17 @@ test('usage events are business-scoped and replay classification is deterministi
 });
 
 test('billing state accepts only verified, in-order provider events', () => {
-  assert.throws(() => acceptVerifiedSubscriptionEvent(null, { businessId: 'A', state: 'active', eventId: 'e1', verified: false }), /UNVERIFIED_PROVIDER_EVENT/);
-  const first = acceptVerifiedSubscriptionEvent(null, { businessId: 'A', state: 'active', eventId: 'e1', createdAt: '2026-10-14T00:00:00Z', verified: true });
+  assert.throws(() => acceptVerifiedSubscriptionEvent(null, { businessId: 'A', state: 'active', eventId: 'event-0001', verified: false }), /UNVERIFIED_PROVIDER_EVENT/);
+  const first = acceptVerifiedSubscriptionEvent(null, { businessId: 'A', state: 'active', eventId: 'event-0001', createdAt: '2026-10-14T00:00:00Z', verified: true });
   assert.equal(first.outcome, 'accepted');
-  assert.equal(acceptVerifiedSubscriptionEvent(first, { businessId: 'A', state: 'active', eventId: 'e1', createdAt: '2026-10-14T00:00:00Z', verified: true }).outcome, 'duplicate');
-  assert.equal(acceptVerifiedSubscriptionEvent(first, { businessId: 'A', state: 'cancelled', eventId: 'e0', createdAt: '2026-10-13T00:00:00Z', verified: true }).outcome, 'ignored_out_of_order');
-  assert.throws(() => acceptVerifiedSubscriptionEvent(first, { businessId: 'B', state: 'active', eventId: 'e2', verified: true }), SubscriptionEventError);
+  assert.equal(acceptVerifiedSubscriptionEvent(first, { businessId: 'A', state: 'active', eventId: 'event-0001', createdAt: '2026-10-14T00:00:00Z', verified: true }).outcome, 'duplicate');
+  assert.equal(acceptVerifiedSubscriptionEvent(first, { businessId: 'A', state: 'cancelled', eventId: 'event-0002', createdAt: '2026-10-13T00:00:00Z', verified: true }).outcome, 'ignored_out_of_order');
+  assert.throws(() => acceptVerifiedSubscriptionEvent(first, { businessId: 'B', state: 'active', eventId: 'event-0003', createdAt: '2026-10-15T00:00:00Z', verified: true }), SubscriptionEventError);
+  assert.throws(() => acceptVerifiedSubscriptionEvent(first, { businessId: 'A', state: 'trialing', eventId: 'event-0004', createdAt: '2026-10-15T00:00:00Z', verified: true }), /INVALID_SUBSCRIPTION_TRANSITION/);
 });
 
 test('operational audit events redact sensitive keys and require attribution', () => {
-  const event = createAuditEvent({ action: 'admin.accept', result: 'success', correlationId: 'req-12345678', actorClass: 'owner', details: { count: 1, token: 'secret', note: { private: true } } });
+  const event = createAuditEvent({ action: 'admin.accept', result: 'success', correlationId: 'req-12345678', actorClass: 'owner', details: { count: 1, token: 'secret', leaked: 'Bearer sk-live-not-a-real-secret', note: { private: true } } });
   assert.deepEqual(event.details, { count: '1' });
   assert.throws(() => createAuditEvent({ action: 'x' }), AuditEventError);
 });

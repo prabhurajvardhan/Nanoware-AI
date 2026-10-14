@@ -2,7 +2,7 @@
 
 - **Branch:** `roadmap/implementation`
 - **Base:** `d80e3e0` (PR #6 and PR #7 merged into `main`)
-- **Status:** Partial implementation; not merged, pushed, or deployed
+- **Status:** Partial implementation; pushed in PR #8, not merged or deployed
 - **Scope:** T003, T004, T005, T006 foundation primitives
 
 ## Implemented

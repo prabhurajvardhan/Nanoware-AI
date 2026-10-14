@@ -4,6 +4,16 @@ import fs from 'node:fs';
 
 const adminSource = fs.readFileSync(new URL('../lib/firebase-admin.ts', import.meta.url), 'utf8');
 const sessionSource = fs.readFileSync(new URL('../app/api/auth/session/route.ts', import.meta.url), 'utf8');
+const providerSource = fs.readFileSync(new URL('../components/AuthProvider.tsx', import.meta.url), 'utf8');
+const firebaseConfig = JSON.parse(fs.readFileSync(new URL('../firebase-applet-config.json', import.meta.url), 'utf8'));
+
+test('Firebase client and Admin configuration target nanoware-ai consistently', () => {
+  assert.equal(firebaseConfig.projectId, 'nanoware-ai');
+  assert.equal(firebaseConfig.authDomain, 'nanoware-ai.firebaseapp.com');
+  assert.equal(firebaseConfig.storageBucket, 'nanoware-ai.firebasestorage.app');
+  assert.equal(firebaseConfig.messagingSenderId, '424269053050');
+  assert.match(adminSource, /firebaseConfig\.projectId/);
+});
 
 test('production Firebase Admin initialization fails closed when the server credential is missing or mismatched', () => {
   assert.match(adminSource, /FIREBASE_SERVICE_ACCOUNT_JSON_MISSING/);
@@ -13,10 +23,19 @@ test('production Firebase Admin initialization fails closed when the server cred
 });
 
 test('session failures distinguish invalid credentials from infrastructure failures and keep cookies HttpOnly', () => {
+  assert.match(sessionSource, /runtime = 'nodejs'/);
+  assert.match(sessionSource, /dynamic = 'force-dynamic'/);
+  assert.match(sessionSource, /isSameOrigin/);
+  assert.match(sessionSource, /auth_time/);
   assert.match(sessionSource, /Authentication failed\.' \}, 401/);
   assert.match(sessionSource, /temporarily unavailable\.' \}, 503/);
   assert.match(sessionSource, /httpOnly: true/);
   assert.match(sessionSource, /x-request-id/);
   assert.doesNotMatch(sessionSource, /console\.error\([^\n]*idToken/);
   assert.doesNotMatch(sessionSource, /return response\([^\n]*error\.message/);
+});
+
+test('auth state observation does not create duplicate sessions from stale Firebase tokens', () => {
+  assert.doesNotMatch(providerSource, /method: 'POST'/);
+  assert.match(providerSource, /onAuthStateChanged\(auth, \(u\)/);
 });

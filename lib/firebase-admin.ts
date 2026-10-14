@@ -47,6 +47,6 @@ export function getFirebaseAdminApp() {
 export function getAdminDb(): Firestore {
   if (adminDb) return adminDb;
   const app = getFirebaseAdminApp();
-  adminDb = firebaseConfig.firestoreDatabaseId ? getFirestore(app, firebaseConfig.firestoreDatabaseId) : getFirestore(app);
+  adminDb = getFirestore(app);
   return adminDb;
 }

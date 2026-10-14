@@ -6,6 +6,9 @@ import { FirebaseAdminConfigurationError, getFirebaseAdminApp } from '@/lib/fire
 import { MFA_COOKIE, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from '@/lib/auth/server';
 import { enforceRateLimit, rateLimitResponse, trustedClientKey } from '@/lib/security/rate-limit';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
@@ -14,6 +17,9 @@ const cookieOptions = {
   maxAge: SESSION_MAX_AGE_SECONDS,
 };
 const MAX_BODY_BYTES = 24_000;
+const MAX_RECENT_SIGN_IN_AGE_SECONDS = 5 * 60;
+
+type SessionFailure = { code?: unknown; name?: unknown };
 
 async function readBody(request: NextRequest) {
   const declaredLength = Number(request.headers.get('content-length') || 0);
@@ -40,11 +46,30 @@ async function readBody(request: NextRequest) {
 }
 
 function firebaseErrorCode(error: unknown) {
-  return error && typeof error === 'object' && 'code' in error && typeof error.code === 'string' ? error.code : '';
+  const value = error as SessionFailure;
+  return typeof value?.code === 'string' ? value.code : '';
+}
+
+function isConfigurationFailure(error: unknown) {
+  const value = error as SessionFailure;
+  return error instanceof FirebaseAdminConfigurationError
+    || value?.name === 'FirebaseAdminConfigurationError'
+    || ['FIREBASE_SERVICE_ACCOUNT_JSON_MISSING', 'FIREBASE_SERVICE_ACCOUNT_JSON_INVALID', 'FIREBASE_PROJECT_MISMATCH'].includes(firebaseErrorCode(error));
 }
 
 function isInvalidCredential(error: unknown) {
   return ['auth/id-token-expired', 'auth/id-token-revoked', 'auth/invalid-id-token', 'auth/argument-error', 'auth/user-disabled'].includes(firebaseErrorCode(error));
+}
+
+function isSameOrigin(request: NextRequest) {
+  const expectedOrigin = request.nextUrl.origin;
+  const suppliedOrigin = request.headers.get('origin');
+  if (suppliedOrigin) return suppliedOrigin === expectedOrigin;
+  const referer = request.headers.get('referer');
+  if (referer) {
+    try { return new URL(referer).origin === expectedOrigin; } catch { return false; }
+  }
+  return true;
 }
 
 function response(body: Record<string, unknown>, status: number, requestId: string) {
@@ -56,7 +81,8 @@ function response(body: Record<string, unknown>, status: number, requestId: stri
 export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID();
   try {
-    await enforceRateLimit(trustedClientKey(request, 'session'), 10, 15 * 60 * 1000);
+    if (!isSameOrigin(request)) return response({ error: 'Invalid request origin.' }, 403, requestId);
+
     let body: unknown;
     try { body = JSON.parse(await readBody(request)); }
     catch (error) {
@@ -65,8 +91,14 @@ export async function POST(request: NextRequest) {
     }
     const idToken = body && typeof body === 'object' && 'idToken' in body && typeof body.idToken === 'string' ? body.idToken : '';
     if (!idToken || idToken.length > 20_000) return response({ error: 'Invalid session token.' }, 400, requestId);
+
+    // Rate-limit only explicit session establishment, after cheap request validation.
+    await enforceRateLimit(trustedClientKey(request, 'session'), 10, 15 * 60 * 1000);
     const adminAuth = getAuth(getFirebaseAdminApp());
-    await adminAuth.verifyIdToken(idToken, true);
+    const decoded = await adminAuth.verifyIdToken(idToken, true);
+    if (!decoded.auth_time || Math.floor(Date.now() / 1000) - decoded.auth_time > MAX_RECENT_SIGN_IN_AGE_SECONDS) {
+      return response({ error: 'Recent sign-in required.' }, 401, requestId);
+    }
     const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn: SESSION_MAX_AGE_SECONDS * 1000 });
     const result = response({ success: true }, 200, requestId);
     result.cookies.set(SESSION_COOKIE, sessionCookie, cookieOptions);
@@ -74,8 +106,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const limited = rateLimitResponse(error);
     if (limited) { limited.headers.set('x-request-id', requestId); return limited; }
-    if (error instanceof FirebaseAdminConfigurationError) {
-      console.error('Session infrastructure configuration failure:', error.code, requestId);
+    if (isConfigurationFailure(error)) {
+      console.error('Session infrastructure configuration failure:', firebaseErrorCode(error) || 'unknown', requestId);
       return response({ error: 'Authentication service is temporarily unavailable.' }, 503, requestId);
     }
     if (isInvalidCredential(error)) return response({ error: 'Authentication failed.' }, 401, requestId);
@@ -85,7 +117,6 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE() {
-  const cookieStore = await cookies();
   const result = NextResponse.json({ success: true });
   result.cookies.set(SESSION_COOKIE, '', { ...cookieOptions, maxAge: 0 });
   result.cookies.set(MFA_COOKIE, '', { ...cookieOptions, maxAge: 0 });

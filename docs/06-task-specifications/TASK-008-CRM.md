@@ -5,7 +5,7 @@
 - **Last updated:** 2026-10-13
 
 - **Priority:** P1
-- **Status:** PROPOSED
+- **Status:** PARTIAL — business-local contact normalization and privacy projection foundation implemented; persistence, PII, retention, and membership decisions remain open. See [Batch 2 domain foundation evidence](../ROADMAP-BATCH-2-DOMAIN-FOUNDATION.md).
 - **Dependencies:** TASK-003, TASK-004, TASK-007
 - **Related requirements:** PR-01; CRM
 - **Related architecture:** Multi-tenancy and data model

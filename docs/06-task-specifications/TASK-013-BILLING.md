@@ -5,7 +5,7 @@
 - **Last updated:** 2026-10-13
 
 - **Priority:** P1
-- **Status:** PROPOSED
+- **Status:** PARTIAL — verified-event, tenant, duplicate, and ordering guards implemented; provider, webhook, commercial, and secret decisions remain open. See [Batch 3 product foundation evidence](../ROADMAP-BATCH-3-PRODUCT-FOUNDATION.md).
 - **Dependencies:** TASK-012
 - **Related requirements:** PR-06; subscriptions and pricing
 - **Related architecture:** API contracts and security

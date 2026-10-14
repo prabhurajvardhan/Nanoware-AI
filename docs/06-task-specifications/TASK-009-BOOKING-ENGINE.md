@@ -5,7 +5,7 @@
 - **Last updated:** 2026-10-13
 
 - **Priority:** P0
-- **Status:** PROPOSED
+- **Status:** PARTIAL — lifecycle and deterministic slot/idempotency key foundation implemented; policy, persistence, and atomic reservation evidence remain open. See [Batch 2 domain foundation evidence](../ROADMAP-BATCH-2-DOMAIN-FOUNDATION.md).
 - **Dependencies:** TASK-004, TASK-007, TASK-008
 - **Related requirements:** PR-03; booking requirements
 - **Related architecture:** Data model, error recovery, time handling

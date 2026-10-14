@@ -5,7 +5,7 @@
 - **Last updated:** 2026-10-13
 
 - **Priority:** P0
-- **Status:** PROPOSED
+- **Status:** PARTIAL — generic envelope/correlation foundation implemented; endpoint schemas remain dependent on tenant/provider decisions. See [Batch 1 foundation evidence](../ROADMAP-BATCH-1-FOUNDATION.md).
 - **Dependencies:** TASK-001, TASK-003
 - **Related requirements:** PR-02–PR-06; API contracts
 - **Related architecture:** Data model and API contracts

@@ -5,7 +5,7 @@
 - **Last updated:** 2026-10-13
 
 - **Priority:** P0
-- **Status:** PROPOSED
+- **Status:** PARTIAL — conservative local release-gate evaluator implemented; staging/production ownership, recovery, provider, and approval evidence remain unverified. See [Batch 4 release and voice foundation](../ROADMAP-BATCH-4-RELEASE-VOICE.md).
 - **Dependencies:** TASK-001..TASK-014
 - **Related requirements:** All requirements and release acceptance
 - **Related architecture:** Deployment and rollback

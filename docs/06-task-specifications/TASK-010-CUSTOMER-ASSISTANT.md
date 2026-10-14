@@ -5,7 +5,7 @@
 - **Last updated:** 2026-10-13
 
 - **Priority:** P1
-- **Status:** PROPOSED
+- **Status:** PARTIAL — provider-neutral tool allowlist and tenant/idempotency guards implemented; provider, retrieval, retention, and live booking integration remain open. See [Batch 2 domain foundation evidence](../ROADMAP-BATCH-2-DOMAIN-FOUNDATION.md).
 - **Dependencies:** TASK-007, TASK-009
 - **Related requirements:** PR-02, PR-03; assistant
 - **Related architecture:** Security architecture and API contracts

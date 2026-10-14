@@ -8,10 +8,13 @@ const providerSource = fs.readFileSync(new URL('../components/AuthProvider.tsx',
 const firebaseConfig = JSON.parse(fs.readFileSync(new URL('../firebase-applet-config.json', import.meta.url), 'utf8'));
 
 test('Firebase client and Admin configuration target nanoware-ai consistently', () => {
+  assert.equal(firebaseConfig.apiKey, 'AIzaSyB4g6xngu9X70kcQFic8rAeUvcQkk6iSUg');
   assert.equal(firebaseConfig.projectId, 'nanoware-ai');
   assert.equal(firebaseConfig.authDomain, 'nanoware-ai.firebaseapp.com');
   assert.equal(firebaseConfig.storageBucket, 'nanoware-ai.firebasestorage.app');
   assert.equal(firebaseConfig.messagingSenderId, '424269053050');
+  assert.equal(firebaseConfig.appId, '1:424269053050:web:5987eae5cfe5972d268fc3');
+  assert.equal(firebaseConfig.measurementId, 'G-B5Y0GETQ8E');
   assert.match(adminSource, /firebaseConfig\.projectId/);
 });
 

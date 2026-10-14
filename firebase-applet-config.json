@@ -1,7 +1,9 @@
 {
-  "projectId": "nanoware-ai",
-  "apiKey": "AIzaSyDmXp4Hgly81JtFBkNbAkaPApywy46hBbg",
+  "apiKey": "AIzaSyB4g6xngu9X70kcQFic8rAeUvcQkk6iSUg",
   "authDomain": "nanoware-ai.firebaseapp.com",
+  "projectId": "nanoware-ai",
   "storageBucket": "nanoware-ai.firebasestorage.app",
-  "messagingSenderId": "424269053050"
+  "messagingSenderId": "424269053050",
+  "appId": "1:424269053050:web:5987eae5cfe5972d268fc3",
+  "measurementId": "G-B5Y0GETQ8E"
 }

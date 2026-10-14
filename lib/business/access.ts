@@ -23,6 +23,7 @@ export type BusinessMembership = {
   status: 'active';
   businessName: string;
   businessStatus: string;
+  subscriptionState: string | null;
 };
 
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
@@ -42,6 +43,7 @@ function businessSummary(businessId: string, data: FirebaseFirestore.DocumentDat
     status: 'active',
     businessName: data.name,
     businessStatus: data.status,
+    subscriptionState: typeof data.subscription?.state === 'string' ? data.subscription.state : null,
   };
 }
 

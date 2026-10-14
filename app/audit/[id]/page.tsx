@@ -69,7 +69,8 @@ export default function AuditPage({ params }: { params: Promise<{ id: string }> 
     async function fetchAudit() {
       try {
         console.log('Fetching audit:', id);
-        const response = await fetch(`/api/audit?id=${id}`);
+        const share = new URLSearchParams(window.location.search).get('share');
+        const response = await fetch(`/api/audit?id=${encodeURIComponent(id)}${share ? `&share=${encodeURIComponent(share)}` : ''}`);
         
         if (response.ok) {
           const data = await response.json();

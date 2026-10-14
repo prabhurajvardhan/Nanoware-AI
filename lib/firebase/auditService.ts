@@ -1,5 +1,6 @@
 import { getAdminDb } from '@/lib/firebase-admin';
 import type { AuditReport } from '@/lib/audit/types';
+import crypto from 'node:crypto';
 
 const AUDITS_COLLECTION = 'audits';
 
@@ -9,9 +10,10 @@ type StoredAudit = AuditReport & {
   visibility: 'legacy-public-pending-policy';
   schemaVersion: 1;
   updatedAt: string;
+  shareTokenHash: string;
 };
 
-function toStoredAudit(audit: AuditReport): StoredAudit {
+function toStoredAudit(audit: AuditReport, shareTokenHash: string): StoredAudit {
   return {
     ...audit,
     createdAt: audit.createdAt instanceof Date ? audit.createdAt : new Date(audit.createdAt),
@@ -20,6 +22,7 @@ function toStoredAudit(audit: AuditReport): StoredAudit {
     ownerType: 'unresolved',
     visibility: 'legacy-public-pending-policy',
     schemaVersion: 1,
+    shareTokenHash,
   };
 }
 
@@ -30,11 +33,11 @@ function fromFirestore(data: FirebaseFirestore.DocumentData): AuditReport {
   } as AuditReport;
 }
 
-export async function saveAudit(audit: AuditReport): Promise<string> {
+export async function saveAudit(audit: AuditReport, shareTokenHash: string): Promise<string> {
   try {
     const db = getAdminDb();
     const docRef = db.collection(AUDITS_COLLECTION).doc(audit.id);
-    await docRef.set(toStoredAudit(audit), { merge: false });
+    await docRef.set(toStoredAudit(audit, shareTokenHash), { merge: false });
     return docRef.id;
   } catch (error) {
     console.error('Error saving audit:', error instanceof Error ? error.message : 'unknown error');
@@ -42,28 +45,21 @@ export async function saveAudit(audit: AuditReport): Promise<string> {
   }
 }
 
-export async function getAuditById(auditId: string): Promise<AuditReport | null> {
+export async function getAuditById(auditId: string, shareToken: string): Promise<AuditReport | null> {
   if (!/^audit_[A-Za-z0-9_-]{8,160}$/.test(auditId)) return null;
+  if (!/^[a-f0-9]{64}$/.test(shareToken)) return null;
   try {
     const doc = await getAdminDb().collection(AUDITS_COLLECTION).doc(auditId).get();
     if (!doc.exists) return null;
     const data = doc.data();
-    if (!data || data.status !== 'complete') return null;
+    if (!data || data.status !== 'complete' || typeof data.shareTokenHash !== 'string') return null;
+    const expected = Buffer.from(data.shareTokenHash, 'hex');
+    const supplied = Buffer.from(crypto.createHash('sha256').update(shareToken).digest('hex'), 'hex');
+    if (expected.length !== supplied.length || !crypto.timingSafeEqual(expected, supplied)) return null;
     return fromFirestore(data);
   } catch (error) {
     console.error('Error getting audit:', error instanceof Error ? error.message : 'unknown error');
     return null;
-  }
-}
-
-export async function getRecentAudits(maxCount = 20): Promise<AuditReport[]> {
-  const limit = Math.max(1, Math.min(maxCount, 100));
-  try {
-    const snapshot = await getAdminDb().collection(AUDITS_COLLECTION).where('status', '==', 'complete').orderBy('createdAt', 'desc').limit(limit).get();
-    return snapshot.docs.map((doc) => fromFirestore(doc.data()));
-  } catch (error) {
-    console.error('Error getting recent audits:', error instanceof Error ? error.message : 'unknown error');
-    return [];
   }
 }
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirebaseAdminApp } from '@/lib/firebase-admin';
-import { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from '@/lib/auth/server';
+import { MFA_COOKIE, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from '@/lib/auth/server';
 import { enforceRateLimit, rateLimitResponse, trustedClientKey } from '@/lib/security/rate-limit';
 
 const cookieOptions = {
@@ -66,16 +66,8 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE() {
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE)?.value;
-  if (sessionCookie) {
-    try {
-      const decoded = await getAuth(getFirebaseAdminApp()).verifySessionCookie(sessionCookie, false);
-      await getAuth(getFirebaseAdminApp()).revokeRefreshTokens(decoded.uid);
-    } catch {
-      // Clearing a malformed/expired cookie remains safe and idempotent.
-    }
-  }
   const response = NextResponse.json({ success: true });
   response.cookies.set(SESSION_COOKIE, '', { ...cookieOptions, maxAge: 0 });
+  response.cookies.set(MFA_COOKIE, '', { ...cookieOptions, maxAge: 0 });
   return response;
 }

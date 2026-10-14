@@ -13,8 +13,9 @@ function keyHash(value: string) {
 const CLAIM_TTL_MS = 5 * 60 * 1000;
 
 export async function POST(request: NextRequest) {
-  const release = acquireLocalConcurrency();
+  let release: (() => void) | undefined;
   try {
+    release = acquireLocalConcurrency();
     await enforceRateLimit(trustedClientKey(request, 'public-request'), 5, 60 * 60 * 1000);
     const body: unknown = await request.json();
     if (!body || typeof body !== 'object') return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
@@ -87,6 +88,6 @@ export async function POST(request: NextRequest) {
     console.error('Public request failed:', error instanceof Error ? error.message : 'unknown error');
     return NextResponse.json({ error: 'Unable to submit the request.' }, { status: 400 });
   } finally {
-    release();
+    release?.();
   }
 }

@@ -6,6 +6,8 @@ import { getFirebaseAdminApp } from '@/lib/firebase-admin';
 import { sendAdminOtpEmail } from '@/lib/email/actions';
 import { requireAdminActor } from '@/lib/auth/server';
 import { enforceRateLimit } from '@/lib/security/rate-limit';
+import { cookies } from 'next/headers';
+import { createMfaToken, hash as hashMfa, MFA_COOKIE, MFA_MAX_AGE_SECONDS } from '@/lib/auth/server';
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const RESEND_WINDOW_MS = 60 * 1000;
@@ -101,7 +103,23 @@ export async function verifyAdminOtpAction(challengeId: string, code: string) {
       return true;
     });
 
-    return result ? { success: true } : { success: false, error: 'Invalid or expired verification code.' };
+    if (!result) return { success: false, error: 'Invalid or expired verification code.' };
+
+    const token = createMfaToken();
+    await db.collection('admin_mfa_sessions').doc(hashMfa(token)).set({
+      uid: actor.uid,
+      createdAt: FieldValue.serverTimestamp(),
+      expiresAt: Date.now() + MFA_MAX_AGE_SECONDS * 1000,
+    });
+    const cookieStore = await cookies();
+    cookieStore.set(MFA_COOKIE, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: MFA_MAX_AGE_SECONDS,
+    });
+    return { success: true };
   } catch (error) {
     console.error('Admin OTP verification failed:', error instanceof Error ? error.message : 'unknown error');
     return { success: false, error: 'Unable to verify the code. Please try again later.' };

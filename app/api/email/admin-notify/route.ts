@@ -7,12 +7,9 @@ function validText(value: unknown, max: number) {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= max;
 }
 
-async function authorized(req: NextRequest) {
-  const configuredSecret = process.env.APP_SECRET;
-  const authHeader = req.headers.get('authorization');
-  if (configuredSecret && authHeader === `Bearer ${configuredSecret}`) return true;
+async function authorized() {
   try {
-    await requireAdminActor();
+    await requireAdminActor({ requireMfa: true });
     return true;
   } catch {
     return false;
@@ -21,7 +18,7 @@ async function authorized(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    if (!(await authorized(req))) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
+    if (!(await authorized())) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     await enforceRateLimit(trustedClientKey(req, 'admin-notify'), 30, 60 * 60 * 1000);
 
     const body: unknown = await req.json();

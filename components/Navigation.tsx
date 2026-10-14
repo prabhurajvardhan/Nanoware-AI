@@ -88,10 +88,10 @@ export function Navigation() {
               </>
             ) : (
               <Link 
-                href="/login"
+                href="/businesses"
                 className="text-sm font-medium text-slate-500 hover:text-brand-secondary transition-colors"
               >
-                Client Portal
+                For Businesses
               </Link>
             )}
             <Link 
@@ -170,11 +170,11 @@ export function Navigation() {
                   </>
                 ) : (
                   <Link
-                     href="/login"
+                     href="/businesses"
                      onClick={() => setMobileMenuOpen(false)}
                      className="text-brand-secondary hover:text-brand-accent transition-colors block"
                   >
-                    Client Portal
+                    For Businesses
                   </Link>
                 )}
                 <Link

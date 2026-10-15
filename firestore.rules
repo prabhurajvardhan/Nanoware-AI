@@ -8,7 +8,7 @@ service cloud.firestore {
 
     function isSignedIn() { return request.auth != null; }
     function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
-    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\-]+$'); }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_-]+$'); }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
     function hasBusinessMembership(businessId) {
@@ -39,7 +39,8 @@ service cloud.firestore {
     }
 
     match /admins/{userId} {
-      allow read: if isSignedIn();
+      // Admin markers are resolved by trusted server routes using the Admin SDK.
+      allow read: if false;
       allow write: if false;
     }
 

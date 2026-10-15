@@ -9,6 +9,7 @@ const sessionSource = fs.readFileSync(new URL('../app/api/auth/session/route.ts'
 const providerSource = fs.readFileSync(new URL('../components/AuthProvider.tsx', import.meta.url), 'utf8');
 const loginSource = fs.readFileSync(new URL('../app/login/page.tsx', import.meta.url), 'utf8');
 const firebaseConfig = JSON.parse(fs.readFileSync(new URL('../firebase-applet-config.json', import.meta.url), 'utf8'));
+const { sanitizeSessionDiagnostic, sessionErrorDetails } = await import('../lib/auth/session-diagnostics.ts');
 
 test('Firebase client and Admin configuration target nanoware-ai consistently', () => {
   assert.equal(firebaseConfig.apiKey, 'AIzaSyB4g6xngu9X70kcQFic8rAeUvcQkk6iSUg');
@@ -44,8 +45,24 @@ test('session failures distinguish invalid credentials from infrastructure failu
   assert.match(sessionSource, /temporarily unavailable\.' \}, 503/);
   assert.match(sessionSource, /httpOnly: true/);
   assert.match(sessionSource, /x-request-id/);
+  assert.match(sessionSource, /stage = 'verify-id-token'/);
+  assert.match(sessionSource, /stage = 'create-session-cookie'/);
+  assert.match(sessionSource, /console\.error\('Session provider failure', \{/);
+  assert.match(sessionSource, /\.\.\.sessionErrorDetails\(error\)/);
   assert.doesNotMatch(sessionSource, /console\.error\([^\n]*idToken/);
   assert.doesNotMatch(sessionSource, /return response\([^\n]*error\.message/);
+});
+
+test('session diagnostics redact tokens, credentials, keys, and email addresses', () => {
+  const diagnostic = sanitizeSessionDiagnostic('Bearer abc.def token=eyJabcdefghijk.abcdefghijk.x FIREBASE_SERVICE_ACCOUNT_JSON={"private_key":"secret"} user@example.com');
+  assert.doesNotMatch(diagnostic, /abc\.def|eyJabcdefghijk|secret|user@example\.com/);
+  assert.match(diagnostic, /Bearer \[REDACTED\]/);
+  assert.match(diagnostic, /token=\[REDACTED(?: TOKEN)?\]/);
+  const details = sessionErrorDetails(Object.assign(new Error('failed for user@example.com'), { code: 'auth/internal-error' }));
+  assert.equal(details.errorName, 'Error');
+  assert.equal(details.errorCode, 'auth/internal-error');
+  assert.doesNotMatch(details.errorMessage, /user@example\.com/);
+  assert.match(details.errorStack, /Error: failed/);
 });
 
 test('auth state observation does not create duplicate sessions from stale Firebase tokens', () => {

@@ -29,12 +29,13 @@ beforeEach(async () => {
   });
 });
 
-test('signed-in users cannot get any admin marker or list admin markers', async () => {
+test('signed-in users cannot get, list, or write admin markers', async () => {
   const userDb = testEnv.authenticatedContext('ordinary-user').firestore();
 
   await assertFails(getDoc(doc(userDb, 'admins', 'ordinary-user')));
   await assertFails(getDoc(doc(userDb, 'admins', 'admin-user')));
   await assertFails(getDocs(collection(userDb, 'admins')));
+  await assertFails(setDoc(doc(userDb, 'admins', 'ordinary-user'), { active: true }));
 });
 
 test('admin marker still grants intended project access through rules while direct marker reads stay denied', async () => {

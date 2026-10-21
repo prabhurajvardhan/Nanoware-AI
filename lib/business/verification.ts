@@ -2,12 +2,13 @@ import crypto from 'node:crypto';
 import dns from 'node:dns/promises';
 import { fetchPublicHtml } from '../security/safe-fetch';
 import { normalizeEmail } from '../security/validation.mjs';
+import { domainMatchesWebsite } from './domain-format';
 
 export const VERIFICATION_STATUSES = ['not_started', 'pending_verification', 'pending_review', 'verified', 'more_information_required', 'rejected', 'suspended'] as const;
 export type VerificationStatus = (typeof VERIFICATION_STATUSES)[number];
 
 export class BusinessVerificationError extends Error {
-  public readonly code: 'INVALID_BUSINESS_DETAILS' | 'FREE_EMAIL_NOT_ALLOWED' | 'REGISTRATION_ALREADY_USED' | 'REGISTRATION_REJECTED' | 'WEBSITE_OWNERSHIP_UNVERIFIED' | 'VERIFICATION_NOT_FOUND' | 'INVALID_VERIFICATION_ACTION' | 'VERIFICATION_CONFLICT';
+  public readonly code: 'INVALID_BUSINESS_DETAILS' | 'FREE_EMAIL_NOT_ALLOWED' | 'BUSINESS_EMAIL_DOMAIN_MISMATCH' | 'REGISTRATION_ALREADY_USED' | 'REGISTRATION_REJECTED' | 'WEBSITE_OWNERSHIP_UNVERIFIED' | 'VERIFICATION_NOT_FOUND' | 'INVALID_VERIFICATION_ACTION' | 'VERIFICATION_CONFLICT';
   constructor(code: BusinessVerificationError['code']) {
     super(code);
     this.code = code;
@@ -80,7 +81,9 @@ export function validateVerificationInput(raw: Partial<VerificationInput>, sessi
   const businessName = clean(raw.businessName || raw.tradeName || raw.legalName, 160);
   const countryCode = String(raw.countryCode || raw.country || '').trim().toUpperCase();
   const website = clean(raw.website, 2048);
-  const businessEmail = normalizeEmail(raw.businessEmail || sessionEmail);
+  const submittedEmail = String(raw.businessEmail || '').trim();
+  if (!submittedEmail) throw new BusinessVerificationError('INVALID_BUSINESS_DETAILS');
+  const businessEmail = normalizeEmail(submittedEmail);
   if (!COUNTRY_CODE.test(countryCode)) throw new BusinessVerificationError('INVALID_BUSINESS_DETAILS');
   try {
     const parsed = new URL(website.startsWith('http') ? website : `https://${website}`);
@@ -88,6 +91,8 @@ export function validateVerificationInput(raw: Partial<VerificationInput>, sessi
   } catch {
     throw new BusinessVerificationError('INVALID_BUSINESS_DETAILS');
   }
+  if (isFreeBusinessEmail(businessEmail)) throw new BusinessVerificationError('FREE_EMAIL_NOT_ALLOWED');
+  if (!domainMatchesWebsite(businessEmail, website)) throw new BusinessVerificationError('BUSINESS_EMAIL_DOMAIN_MISMATCH');
   return {
     businessName,
     countryCode,

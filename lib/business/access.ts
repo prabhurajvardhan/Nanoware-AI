@@ -9,6 +9,7 @@ import {
   type VerificationStatus,
   validateVerificationInput,
 } from './verification';
+import { invalidateDomainEmailTokens } from './domain-email-verification';
 
 export const BUSINESS_ROLES = ['owner', 'admin', 'member'] as const;
 export type BusinessRole = (typeof BUSINESS_ROLES)[number];
@@ -118,6 +119,17 @@ export async function createInitialBusiness(input: { userId: string; email: stri
   if (existingBusiness.exists && existingBusiness.data()?.verificationStatus === 'rejected') throw new BusinessVerificationError('REGISTRATION_REJECTED');
   if (existingBusiness.exists && ['pending_verification', 'pending_review', 'more_information_required'].includes(existingBusiness.data()?.verificationStatus)) {
     const existingVerification = existingBusiness.data()?.verification;
+    if (String(existingVerification?.businessEmail || '').toLowerCase() !== verification.businessEmail.toLowerCase()) {
+      await invalidateDomainEmailTokens(input.userId, businessId);
+      await businessRef.update({
+        contactEmail: verification.businessEmail,
+        'verification.businessEmail': verification.businessEmail,
+        'verification.emailDomain': verification.emailDomain,
+        'verification.emailDomainIsFree': verification.emailDomainIsFree,
+        'verification.checks.businessDomainEmail': 'pending',
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
     const existingProof = existingVerification?.websiteProof;
     if (existingProof?.token && existingVerification?.website) {
       const refreshedCheck = await checkWebsiteOwnership(existingVerification.website, existingProof);
@@ -173,7 +185,7 @@ export async function createInitialBusiness(input: { userId: string; email: stri
           accountEmail: 'verified',
           phone: 'pending',
           websiteOwnership: websiteCheck.status,
-          businessDomainEmail: verification.emailDomainIsFree ? 'not_provided' : 'pending',
+          businessDomainEmail: 'pending',
           googleBusinessProfile: 'not_provided',
         },
         evidence: [{ evidenceType: 'website_ownership', status: websiteCheck.status, source: websiteCheck.method || 'unavailable', checkedAt: now }],

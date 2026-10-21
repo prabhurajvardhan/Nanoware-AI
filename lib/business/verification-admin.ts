@@ -67,7 +67,7 @@ export async function reviewBusinessVerification(input: {
     const account = accountSnapshot?.data() || {};
     let nextStatus: VerificationStatus = 'pending_review';
     if (input.action === 'approve') {
-      if (account.emailVerified !== true || account.phoneVerification?.status !== 'verified') throw new BusinessVerificationError('VERIFICATION_CONFLICT');
+      if (account.emailVerified !== true || verification.checks?.businessDomainEmail !== 'verified') throw new BusinessVerificationError('VERIFICATION_CONFLICT');
       nextStatus = 'verified';
     } else if (input.action === 'reject') {
       nextStatus = 'rejected';

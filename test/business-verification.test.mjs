@@ -20,7 +20,7 @@ test('business-domain matching normalizes schemes, ports, www, and subdomains wi
   assert.equal(domainMatchesWebsite('owner@notexample.com', 'example.com'), false);
 });
 
- test('universal onboarding uses country-neutral business signals', () => {
+test('onboarding requires a business-domain email and does not require SMS', () => {
   const verification = read('lib/business/verification.ts');
   const onboarding = read('app/businesses/onboarding/page.tsx');
   assert.match(verification, /businessName/);
@@ -29,14 +29,22 @@ test('business-domain matching normalizes schemes, ports, www, and subdomains wi
   assert.match(onboarding, /Verify business/);
   assert.match(onboarding, /Business name/);
   assert.match(onboarding, /Website/);
+  assert.match(onboarding, /Business email/);
+  assert.match(onboarding, /type="email"/);
   assert.match(onboarding, /Country/);
+  assert.match(onboarding, /domainStatus/);
+  assert.doesNotMatch(onboarding, /requestPhoneCode/);
+  assert.doesNotMatch(onboarding, /phoneCountries/);
   assert.doesNotMatch(onboarding, /registrationNumber/);
+  assert.match(verification, /FREE_EMAIL_NOT_ALLOWED/);
+  assert.match(verification, /BUSINESS_EMAIL_DOMAIN_MISMATCH/);
 });
 
-test('approval requires authoritative account email and phone verification', () => {
+test('approval requires authoritative account email and verified business-domain email', () => {
   const service = read('lib/business/verification-admin.ts');
   assert.match(service, /account\.emailVerified !== true/);
-  assert.match(service, /account\.phoneVerification\?\.status !== 'verified'/);
+  assert.match(service, /verification\.checks\?\.businessDomainEmail !== 'verified'/);
+  assert.doesNotMatch(service, /phoneVerification\?\.status !== 'verified'/);
   assert.match(service, /createAuditEvent/);
 });
 

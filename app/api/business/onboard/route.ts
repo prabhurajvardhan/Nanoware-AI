@@ -40,6 +40,8 @@ function errorResponse(error: unknown) {
   if (error instanceof BusinessVerificationError) {
     const messages: Record<string, string> = {
       INVALID_BUSINESS_DETAILS: 'Enter valid business details.',
+      FREE_EMAIL_NOT_ALLOWED: 'Use an email address on your business website domain; public email providers cannot verify business ownership.',
+      BUSINESS_EMAIL_DOMAIN_MISMATCH: 'Use an email on the website domain or one of its subdomains, such as you@example.com for example.com.',
       INVALID_REGISTRATION_NUMBER: 'Enter a valid business registration number.',
       REGISTRATION_ALREADY_USED: 'That registration number is already associated with another business.',
       REGISTRATION_REJECTED: 'This registration number cannot be submitted again.',

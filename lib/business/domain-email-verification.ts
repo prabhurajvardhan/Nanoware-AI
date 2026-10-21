@@ -42,7 +42,9 @@ export async function consumeDomainEmailToken(token: string) {
   await db.runTransaction(async (transaction) => {
     const current = await transaction.get(tokenRef);
     const business = await transaction.get(businessRef);
-    if (!current.exists || current.data()?.used || Number(current.data()?.expiresAt || 0) <= Date.now() || !business.exists) throw new DomainEmailVerificationError('INVALID_TOKEN');
+    const businessData = business.data() || {};
+    const verification = businessData.verification || {};
+    if (!current.exists || current.data()?.used || Number(current.data()?.expiresAt || 0) <= Date.now() || !business.exists || verification.submittedBy !== data.uid || hash(String(verification.businessEmail || '').toLowerCase()) !== current.data()?.emailHash) throw new DomainEmailVerificationError('INVALID_TOKEN');
     transaction.update(tokenRef, { used: true, usedAt: FieldValue.serverTimestamp() });
     transaction.update(businessRef, {
       'verification.checks.businessDomainEmail': 'verified',
@@ -51,4 +53,13 @@ export async function consumeDomainEmailToken(token: string) {
     });
   });
   return { businessId: String(data.businessId) };
+}
+
+export async function invalidateDomainEmailTokens(uid: string, businessId: string) {
+  const snapshot = await getAdminDb().collection('business_domain_email_tokens').where('uid', '==', uid).get();
+  const matching = snapshot.docs.filter((doc) => doc.data().businessId === businessId);
+  if (matching.length === 0) return;
+  const batch = getAdminDb().batch();
+  matching.forEach((doc) => batch.delete(doc.ref));
+  await batch.commit();
 }

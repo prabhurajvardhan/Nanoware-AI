@@ -10,11 +10,11 @@
 | `APP_URL` | `.env.example` and email links; must be an absolute HTTPS origin in production | Server/config |
 | `RESEND_API_KEY` | Resend client | Server only |
 | `ADMIN_EMAIL` | Admin notification recipient | Server/config |
-| `EMAIL_FROM` | Used by email actions | Server/config; not in example |
-| `SMS_PROVIDER` | Set to `twilio` only when the Twilio adapter is configured; absent means phone verification is explicitly unavailable | Server/config |
-| `TWILIO_ACCOUNT_SID` | Twilio SMS account identifier | Server secret only |
-| `TWILIO_AUTH_TOKEN` | Twilio SMS credential | Server secret only |
-| `TWILIO_FROM_NUMBER` | Verified Twilio sender number | Server/config |
+| `EMAIL_FROM` | Used by email actions; must be a sender identity/domain verified in Resend | Server/config |
+| `SMS_PROVIDER` | Optional shared phone-verification integration; not required for business onboarding | Server/config |
+| `TWILIO_ACCOUNT_SID` | Optional Twilio SMS account identifier for phone features outside onboarding | Server secret only |
+| `TWILIO_AUTH_TOKEN` | Optional Twilio SMS credential for phone features outside onboarding | Server secret only |
+| `TWILIO_FROM_NUMBER` | Optional verified Twilio sender number for phone features outside onboarding | Server/config |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | Required Firebase Admin credential for production Auth/Firestore; must belong to project `nanoware-ai` | Server secret only |
 | `APP_SECRET` | Admin-notify bearer comparison | Server secret; fail closed, rotate |
 
@@ -26,6 +26,4 @@ Values are not reproduced here. Confirm every runtime variable, secret manager, 
 
 The previous implementation did not send an account-verification message at all: signup sent a welcome email, used a fallback `hello@nanowareai.in` sender when `EMAIL_FROM` was absent, and swallowed delivery failures in the browser. Resend requires both a valid API key and a sender identity/domain verified in the Resend project. The repaired flow requires explicit `EMAIL_FROM`, sends a single-use 30-minute link, logs only a non-sensitive delivery failure, and exposes a retryable UI state. No production Resend delivery logs were available in this repository, so provider-level rejection codes must still be confirmed in the Resend dashboard after deployment.
 
-Phone verification is deliberately fail-closed when `SMS_PROVIDER` and the Twilio variables are absent; the UI says that SMS is not configured rather than claiming a number was verified.
-
-The first supported phone countries are India (`+91`), United States (`+1`), Canada (`+1`), Australia (`+61`), and United Kingdom (`+44`). The selector and server normalizer must agree on the selected country and national-number length. A configured Twilio account that rejects a request returns a safe provider-failure message; provider response bodies and credentials are never sent to the browser.
+Business onboarding does not require SMS or Twilio configuration. Shared phone-verification utilities remain fail-closed when used by other features: absent provider configuration never marks a phone verified. The supported phone countries remain India (`+91`), United States (`+1`), Canada (`+1`), Australia (`+61`), and United Kingdom (`+44`); a configured Twilio account that rejects a request returns a safe provider-failure message.

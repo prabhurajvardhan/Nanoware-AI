@@ -14,7 +14,7 @@ test('submitting an owner-owned legacy business writes the verification block an
   assert.match(access, /verificationStatus: 'pending_verification'/);
   assert.match(access, /contactEmail: verification\.businessEmail/);
   assert.match(access, /verification: \{[\s\S]*?\.\.\.verification,[\s\S]*?businessDomainEmail: 'pending'/);
-  assert.match(access, /transaction\.set\(businessRef, businessData, \{ merge: true \}\)/);
+  assert.match(access, /transaction\.set\(businessRef, stripUndefinedFirestoreValues\(businessData\), \{ merge: true \}\)/);
 });
 
 test('a resubmitted business profile can proceed to a domain-email request', () => {
@@ -29,7 +29,7 @@ test('a resubmitted business profile can proceed to a domain-email request', () 
 
 test('a different user cannot write to an existing business', () => {
   const ownerGuard = access.indexOf("existingBusinessData?.ownerId !== input.userId");
-  const write = access.indexOf('transaction.set(businessRef, businessData');
+  const write = access.indexOf('transaction.set(businessRef, stripUndefinedFirestoreValues(businessData)');
   assert.notEqual(ownerGuard, -1);
   assert.ok(ownerGuard < write, 'the owner check must run before writing the business document');
   assert.match(access, /throw new BusinessAccessError\('BUSINESS_ALREADY_OWNED'\)/);

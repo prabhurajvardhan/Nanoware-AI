@@ -93,7 +93,7 @@ export function validateVerificationInput(raw: Partial<VerificationInput>, sessi
   }
   if (isFreeBusinessEmail(businessEmail)) throw new BusinessVerificationError('FREE_EMAIL_NOT_ALLOWED');
   if (!domainMatchesWebsite(businessEmail, website)) throw new BusinessVerificationError('BUSINESS_EMAIL_DOMAIN_MISMATCH');
-  return {
+  const validated = {
     businessName,
     countryCode,
     website,
@@ -109,6 +109,7 @@ export function validateVerificationInput(raw: Partial<VerificationInput>, sessi
     emailDomain: businessEmail.split('@')[1].toLowerCase(),
     emailDomainIsFree: isFreeBusinessEmail(businessEmail),
   };
+  return Object.fromEntries(Object.entries(validated).filter(([, value]) => value !== undefined)) as typeof validated;
 }
 
 export function registrationKey(country: string, registrationNumber: string) {

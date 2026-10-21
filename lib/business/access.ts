@@ -104,6 +104,14 @@ function slugify(name: string) {
 
 function sixtyFour() { return 64; }
 
+export function stripUndefinedFirestoreValues<T>(value: T): T {
+  if (Array.isArray(value)) return value.filter((item) => item !== undefined).map(stripUndefinedFirestoreValues) as T;
+  if (value === null || typeof value !== 'object') return value;
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) return value;
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined).map(([key, item]) => [key, stripUndefinedFirestoreValues(item)])) as T;
+}
+
 export async function createInitialBusiness(input: { userId: string; email: string } & Partial<VerificationInput>) {
   const verification = validateVerificationInput(input, input.email);
   const db = getAdminDb();
@@ -122,26 +130,26 @@ export async function createInitialBusiness(input: { userId: string; email: stri
     const existingVerification = existingBusiness.data()?.verification;
     if (String(existingVerification?.businessEmail || '').toLowerCase() !== verification.businessEmail.toLowerCase()) {
       await invalidateDomainEmailTokens(input.userId, businessId);
-      await businessRef.update({
+      await businessRef.update(stripUndefinedFirestoreValues({
         contactEmail: verification.businessEmail,
         'verification.businessEmail': verification.businessEmail,
         'verification.emailDomain': verification.emailDomain,
         'verification.emailDomainIsFree': verification.emailDomainIsFree,
         'verification.checks.businessDomainEmail': 'pending',
         updatedAt: FieldValue.serverTimestamp(),
-      });
+      }));
     }
     const existingProof = existingVerification?.websiteProof;
     if (existingProof?.token && existingVerification?.website) {
       const refreshedCheck = await checkWebsiteOwnership(existingVerification.website, existingProof);
       if (refreshedCheck.status === 'verified' && existingVerification.checks?.websiteOwnership !== 'verified') {
-        await businessRef.update({
+        await businessRef.update(stripUndefinedFirestoreValues({
           'verification.websiteProof.status': refreshedCheck.status,
           'verification.websiteProof.method': refreshedCheck.method,
           'verification.websiteProof.checkedAt': FieldValue.serverTimestamp(),
           'verification.checks.websiteOwnership': refreshedCheck.status,
           updatedAt: FieldValue.serverTimestamp(),
-        });
+        }));
       }
     }
     return requireBusinessMembership(input.userId, businessId);
@@ -207,16 +215,16 @@ export async function createInitialBusiness(input: { userId: string; email: stri
       },
       updatedAt: now,
     };
-    transaction.set(businessRef, businessData, { merge: true });
-    if (!businessDoc.exists) transaction.set(membershipRef, {
+    transaction.set(businessRef, stripUndefinedFirestoreValues(businessData), { merge: true });
+    if (!businessDoc.exists) transaction.set(membershipRef, stripUndefinedFirestoreValues({
       businessId,
       userId: input.userId,
       role: 'owner',
       status: 'active',
       createdAt: now,
       updatedAt: now,
-    }, { merge: true });
-    if (registrationRef) transaction.set(registrationRef, {
+    }), { merge: true });
+    if (registrationRef) transaction.set(registrationRef, stripUndefinedFirestoreValues({
       businessId,
       userId: input.userId,
       country: verification.countryCode,
@@ -224,11 +232,11 @@ export async function createInitialBusiness(input: { userId: string; email: stri
       status: 'pending_review',
       createdAt: registrationDoc?.exists ? registration?.createdAt : now,
       updatedAt: now,
-    }, { merge: true });
+    }), { merge: true });
 
     if (!businessDoc.exists) {
       for (const project of legacyProjects.docs) {
-        if (!project.data().businessId) transaction.update(project.ref, { businessId, updatedAt: now });
+        if (!project.data().businessId) transaction.update(project.ref, stripUndefinedFirestoreValues({ businessId, updatedAt: now }));
       }
     }
   });

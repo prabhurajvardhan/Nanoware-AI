@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AuthBoundaryError, getVerifiedSession } from '@/lib/auth/server';
+import { AuthBoundaryError, requireEmailVerifiedSession } from '@/lib/auth/server';
 import { BusinessAccessError, createInitialBusiness } from '@/lib/business/access';
 import { BusinessVerificationError } from '@/lib/business/verification';
 import { getAdminDb } from '@/lib/firebase-admin';
@@ -33,7 +33,10 @@ async function readBody(request: NextRequest) {
 }
 
 function errorResponse(error: unknown) {
-  if (error instanceof AuthBoundaryError) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+  if (error instanceof AuthBoundaryError) {
+    if (error.code === 'EMAIL_VERIFICATION_REQUIRED') return NextResponse.json({ error: 'Verify your account email before submitting business details.', emailVerificationRequired: true }, { status: 403 });
+    return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+  }
   if (error instanceof BusinessVerificationError) {
     const messages: Record<string, string> = {
       INVALID_BUSINESS_DETAILS: 'Enter valid business details.',
@@ -52,7 +55,7 @@ function errorResponse(error: unknown) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getVerifiedSession();
+    const session = await requireEmailVerifiedSession();
     await enforceRateLimit(`business-verification:${trustedClientKey(request, session.uid)}`, 3, 15 * 60 * 1000);
     const body: unknown = JSON.parse(await readBody(request));
     if (!body || typeof body !== 'object') return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
@@ -60,7 +63,7 @@ export async function POST(request: NextRequest) {
     const snapshot = await getAdminDb().collection('businesses').doc(business.businessId).get();
     const verification = snapshot.data()?.verification;
     const email = typeof verification?.businessEmail === 'string' ? verification.businessEmail : session.email || '';
-    if (email) await sendBusinessVerificationStatusEmail(email, business.businessName, 'pending_review');
+    if (email) await sendBusinessVerificationStatusEmail(email, business.businessName, 'pending_verification');
     return NextResponse.json({
       business,
       verification: {

@@ -35,4 +35,14 @@ Phase 1 stores the submitted legal/trade identity, registration metadata, contac
 
 Migration from `projects`, `requests`, and `audits` is unresolved; inventory before schema changes.
 
+## Universal verification model
+
+The implemented onboarding contract is intentionally country-neutral: `businessName`, `website`, and `countryCode` are the only business-detail fields in the standard form. Registration numbers, custom-domain email, website ownership, and Google Business Profile URLs are optional evidence signals and never universal requirements.
+
+`accounts/{uid}` stores server-maintained `emailVerified` and `phoneVerification.status`. Account-email links are hashed, single-use, and expire after 30 minutes. Phone OTPs are rate-limited, expire after 10 minutes, capped at five attempts, and use `verified_phone_keys` to prevent silent phone reuse. If no explicitly configured SMS provider exists, the server returns a recoverable unavailable state and does not mark a phone verified.
+
+`businesses/{businessId}.verification` stores `checks.accountEmail`, `checks.phone`, `checks.websiteOwnership`, `checks.businessDomainEmail`, `checks.googleBusinessProfile`, and an evidence list. Approval requires authoritative account email and phone verification; other signals support manual review but do not replace it. Allowed lifecycle states include `pending_verification`, `pending_review`, `more_information_required`, `verified`, `rejected`, and `suspended`.
+
+Legacy businesses with no explicit `verificationStatus` are treated as `pending_verification` by the server and are denied project/billing access by Firestore rules. No silent legacy trust is granted; a migration or administrator must write an explicit decision.
+
 **Naming decision:** `memberships` is the canonical implemented relationship collection. Its deterministic document ID is `{businessId}__{userId}`, preventing duplicate owner records during retries while allowing one user to hold memberships in multiple businesses.

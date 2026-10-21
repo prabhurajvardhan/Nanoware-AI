@@ -5,8 +5,9 @@ import * as templates from './templates';
 
 // Helper to get from address
 const getFromAddress = () => {
-  // Use a verified domain or default for testing
-  return process.env.EMAIL_FROM || 'hello@nanowareai.in';
+  const value = process.env.EMAIL_FROM?.trim();
+  if (!value) throw new Error('EMAIL_FROM_MISSING');
+  return value;
 };
 
 const getAdminAddress = () => {
@@ -262,6 +263,34 @@ export async function sendAdminOtpEmail(to: string, code: string) {
   }
 }
 
+export async function sendAccountEmailVerificationEmail(to: string, name: string, verifyUrl: string) {
+  try {
+    const resend = getResendClient();
+    const html = templates.accountEmailVerificationTemplate(name, verifyUrl);
+    const data = await resend.emails.send({
+      from: getFromAddress(),
+      to,
+      subject: 'Verify your Nanoware AI email address',
+      html,
+    });
+    return { success: true, data };
+  } catch (error) {
+    console.error('Account email verification delivery failed:', error instanceof Error ? error.message : 'unknown');
+    return { success: false };
+  }
+}
+
+export async function sendBusinessDomainEmailVerificationEmail(to: string, name: string, verifyUrl: string) {
+  try {
+    const resend = getResendClient();
+    const data = await resend.emails.send({ from: getFromAddress(), to, subject: 'Verify your business email domain - Nanoware AI', html: templates.businessDomainEmailVerificationTemplate(name, verifyUrl) });
+    return { success: true, data };
+  } catch (error) {
+    console.error('Business-domain email verification delivery failed:', error instanceof Error ? error.message : 'unknown');
+    return { success: false };
+  }
+}
+
 /**
  * Generic Admin Notification
  */
@@ -284,13 +313,15 @@ export async function sendAdminNotification(title: string, eventType: string, su
   }
 }
 
-export async function sendBusinessVerificationStatusEmail(to: string, name: string, status: 'pending_review' | 'verified' | 'rejected' | 'suspended', reason?: string) {
+export async function sendBusinessVerificationStatusEmail(to: string, name: string, status: 'pending_verification' | 'pending_review' | 'verified' | 'more_information_required' | 'rejected' | 'suspended', reason?: string) {
   try {
     const resend = getResendClient();
     const html = templates.businessVerificationStatusTemplate({ name, status, reason, url: getAppUrl() });
     const subject = {
+      pending_verification: 'Business verification started - Nanoware AI',
       pending_review: 'Business verification received - Nanoware AI',
       verified: 'Your business is verified - Nanoware AI',
+      more_information_required: 'More information needed - Nanoware AI',
       rejected: 'Action needed on your business verification - Nanoware AI',
       suspended: 'Business access update - Nanoware AI',
     }[status];

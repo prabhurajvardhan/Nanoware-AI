@@ -13,9 +13,11 @@ function authError(error: unknown) {
 export async function GET(request: NextRequest) {
   try {
     await requireAdminActor({ requireMfa: true });
-    const requestedStatus = request.nextUrl.searchParams.get('status') || 'pending_review';
-    const status = ['pending_review', 'verified', 'rejected', 'suspended'].includes(requestedStatus) ? requestedStatus as 'pending_review' | 'verified' | 'rejected' | 'suspended' : 'pending_review';
-    return NextResponse.json({ reviews: await listBusinessVerificationReviews(status) });
+    const requestedStatus = request.nextUrl.searchParams.get('status');
+    const statuses = requestedStatus && ['pending_verification', 'pending_review', 'more_information_required', 'verified', 'rejected', 'suspended'].includes(requestedStatus)
+      ? [requestedStatus as 'pending_verification' | 'pending_review' | 'more_information_required' | 'verified' | 'rejected' | 'suspended']
+      : undefined;
+    return NextResponse.json({ reviews: await listBusinessVerificationReviews(statuses) });
   } catch (error) {
     return authError(error);
   }

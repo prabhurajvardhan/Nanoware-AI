@@ -3,11 +3,10 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb } from '@/lib/firebase-admin';
 import { sendBusinessVerificationStatusEmail } from '@/lib/email/actions';
 import { createAuditEvent } from '@/lib/operations/audit-event.mjs';
-import { BusinessVerificationError, registrationKey, type VerificationStatus } from './verification';
+import { BusinessVerificationError, type VerificationStatus } from './verification';
 
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 const MAX_REASON = 1000;
-
 export type VerificationReviewAction = 'approve' | 'reject' | 'request-more-info';
 
 function cleanReason(reason: unknown) {
@@ -21,19 +20,13 @@ function safeReviewProjection(id: string, data: FirebaseFirestore.DocumentData) 
   return {
     id,
     businessId: id,
-    legalName: verification.legalName || data.name || 'Unknown business',
-    tradeName: verification.tradeName || data.name || 'Unknown business',
-    businessType: verification.businessType || 'other',
-    country: verification.country || '',
+    businessName: data.name || verification.businessName || 'Unknown business',
+    countryCode: verification.countryCode || verification.country || '',
     website: verification.website || '',
-    businessEmail: verification.businessEmail || data.contactEmail || '',
-    phone: verification.phone || '',
-    registrationType: verification.registrationType || 'other',
-    registrationNumber: verification.registrationNumber || '',
-    address: verification.address || '',
-    expectedUse: verification.expectedUse || '',
-    verificationStatus: data.verificationStatus || 'not_started',
+    accountEmail: verification.businessEmail || data.contactEmail || '',
+    verificationStatus: data.verificationStatus || 'pending_verification',
     checks: verification.checks || {},
+    evidence: verification.evidence || [],
     websiteProof: verification.websiteProof ? {
       dnsRecord: verification.websiteProof.dnsRecord || '',
       metaName: verification.websiteProof.metaName || '',
@@ -46,10 +39,9 @@ function safeReviewProjection(id: string, data: FirebaseFirestore.DocumentData) 
   };
 }
 
-export async function listBusinessVerificationReviews(status: VerificationStatus = 'pending_review') {
-  const snapshot = await getAdminDb().collection('businesses').where('verificationStatus', '==', status).limit(100).get();
-  return snapshot.docs
-    .map((doc) => safeReviewProjection(doc.id, doc.data()))
+export async function listBusinessVerificationReviews(statuses: VerificationStatus[] = ['pending_verification', 'pending_review', 'more_information_required']) {
+  const snapshots = await Promise.all(statuses.map((status) => getAdminDb().collection('businesses').where('verificationStatus', '==', status).limit(100).get()));
+  return snapshots.flatMap((snapshot) => snapshot.docs.map((doc) => safeReviewProjection(doc.id, doc.data())))
     .sort((left, right) => String(right.updatedAt || '').localeCompare(String(left.updatedAt || '')));
 }
 
@@ -58,11 +50,8 @@ export async function reviewBusinessVerification(input: {
   actorUid: string;
   action: VerificationReviewAction;
   reason: string;
-  allowFreeEmail?: boolean;
 }) {
-  if (!SAFE_ID.test(input.businessId) || !SAFE_ID.test(input.actorUid) || !['approve', 'reject', 'request-more-info'].includes(input.action)) {
-    throw new BusinessVerificationError('INVALID_VERIFICATION_ACTION');
-  }
+  if (!SAFE_ID.test(input.businessId) || !SAFE_ID.test(input.actorUid) || !['approve', 'reject', 'request-more-info'].includes(input.action)) throw new BusinessVerificationError('INVALID_VERIFICATION_ACTION');
   const reason = cleanReason(input.reason);
   const db = getAdminDb();
   const businessRef = db.collection('businesses').doc(input.businessId);
@@ -71,23 +60,21 @@ export async function reviewBusinessVerification(input: {
     if (!businessSnapshot.exists) throw new BusinessVerificationError('VERIFICATION_NOT_FOUND');
     const data = businessSnapshot.data() || {};
     const verification = data.verification || {};
-    if (!['pending_review', 'rejected'].includes(data.verificationStatus)) throw new BusinessVerificationError('VERIFICATION_CONFLICT');
-    const registrationNumber = typeof verification.registrationNumber === 'string' ? verification.registrationNumber : '';
-    const country = typeof verification.country === 'string' ? verification.country : '';
-    const registrationRef = registrationNumber && country
-      ? db.collection('business_registration_keys').doc(registrationKey(country, registrationNumber))
-      : null;
-    const now = FieldValue.serverTimestamp();
+    if (!['pending_verification', 'pending_review', 'more_information_required', 'rejected'].includes(data.verificationStatus)) throw new BusinessVerificationError('VERIFICATION_CONFLICT');
+    const ownerId = typeof verification.submittedBy === 'string' ? verification.submittedBy : typeof data.ownerId === 'string' ? data.ownerId : '';
+    const accountRef = ownerId ? db.collection('accounts').doc(ownerId) : null;
+    const accountSnapshot = accountRef ? await transaction.get(accountRef) : null;
+    const account = accountSnapshot?.data() || {};
     let nextStatus: VerificationStatus = 'pending_review';
     if (input.action === 'approve') {
-      if (verification.emailDomainIsFree && input.allowFreeEmail !== true) throw new BusinessVerificationError('FREE_EMAIL_NOT_ALLOWED');
-      if (verification.checks?.registrationFormatValid !== true || verification.checks?.websiteOwnership !== 'verified') {
-        throw new BusinessVerificationError('WEBSITE_OWNERSHIP_UNVERIFIED');
-      }
+      if (account.emailVerified !== true || account.phoneVerification?.status !== 'verified') throw new BusinessVerificationError('VERIFICATION_CONFLICT');
       nextStatus = 'verified';
     } else if (input.action === 'reject') {
       nextStatus = 'rejected';
+    } else {
+      nextStatus = 'more_information_required';
     }
+    const now = FieldValue.serverTimestamp();
     transaction.update(businessRef, {
       verificationStatus: nextStatus,
       'verification.reviewReason': reason,
@@ -95,7 +82,6 @@ export async function reviewBusinessVerification(input: {
       'verification.reviewedAt': now,
       updatedAt: now,
     });
-    if (registrationRef) transaction.set(registrationRef, { status: nextStatus, updatedAt: now }, { merge: true });
     const audit = createAuditEvent({
       environment: process.env.NODE_ENV || 'unknown',
       route: '/api/admin/business-verifications',
@@ -104,14 +90,16 @@ export async function reviewBusinessVerification(input: {
       businessId: input.businessId,
       action: `business_verification.${input.action}`,
       result: 'success',
-      details: { reason, nextStatus, freeEmailOverride: input.allowFreeEmail === true },
+      details: { reason, nextStatus },
     });
     transaction.set(db.collection('auditEvents').doc(), audit);
-    return { nextStatus, email: typeof verification.businessEmail === 'string' ? verification.businessEmail : '', name: typeof verification.tradeName === 'string' ? verification.tradeName : data.name || 'Business owner' };
+    return {
+      nextStatus,
+      email: typeof verification.businessEmail === 'string' ? verification.businessEmail : '',
+      name: typeof data.name === 'string' ? data.name : 'Business owner',
+    };
   });
 
-  if (result.email) {
-    await sendBusinessVerificationStatusEmail(result.email, result.name, result.nextStatus === 'pending_review' ? 'pending_review' : result.nextStatus, reason);
-  }
+  if (result.email) await sendBusinessVerificationStatusEmail(result.email, result.name, result.nextStatus, reason);
   return { status: result.nextStatus, businessId: input.businessId };
 }

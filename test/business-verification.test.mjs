@@ -3,36 +3,49 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
-const verification = read('lib/business/verification.ts');
 
-test('business verification contains India registration formats and normalization rules', () => {
-  assert.match(verification, /String\(raw\.country.*toUpperCase\(\)/);
-  assert.match(verification, /clean\(raw\.registrationNumber.*toUpperCase\(\)/);
-  assert.match(verification, /\^\[0-9\]\{2\}\[A-Z0-9\]\{13\}\$/);
-  assert.match(verification, /UDYAM-/);
-});
-
-test('free-mail business submissions remain pending until an explicit admin override', () => {
+ test('universal onboarding uses country-neutral business signals', () => {
+  const verification = read('lib/business/verification.ts');
+  const onboarding = read('app/businesses/onboarding/page.tsx');
+  assert.match(verification, /businessName/);
+  assert.match(verification, /countryCode/);
   assert.match(verification, /emailDomainIsFree/);
-  assert.match(read('lib/business/access.ts'), /businessEmailAccepted: !verification\.emailDomainIsFree/);
-  assert.match(read('lib/business/verification-admin.ts'), /allowFreeEmail !== true/);
+  assert.match(onboarding, /Verify business/);
+  assert.match(onboarding, /Business name/);
+  assert.match(onboarding, /Website/);
+  assert.match(onboarding, /Country/);
+  assert.doesNotMatch(onboarding, /registrationNumber/);
 });
 
-test('verification API and review service keep authorization on the server', () => {
-  const route = read('app/api/admin/business-verifications/[businessId]/route.ts');
+test('approval requires authoritative account email and phone verification', () => {
   const service = read('lib/business/verification-admin.ts');
-  assert.match(route, /requireAdminActor\(\{ requireMfa: true \}\)/);
-  assert.match(route, /allowFreeEmail/);
+  assert.match(service, /account\.emailVerified !== true/);
+  assert.match(service, /account\.phoneVerification\?\.status !== 'verified'/);
   assert.match(service, /createAuditEvent/);
-  assert.match(service, /transaction\.set\(db\.collection\('auditEvents'\)/);
-  assert.match(service, /websiteOwnership !== 'verified'/);
 });
 
-test('operations business access requires verified status while list access exposes only safe status fields', () => {
+test('account email verification is single-use and delivery recovery is observable', () => {
+  const email = read('lib/auth/email-verification.ts');
+  const request = read('app/api/auth/email/request/route.ts');
+  assert.match(email, /expiresAt/);
+  assert.match(email, /used/);
+  assert.match(email, /updateUser\(uid, \{ emailVerified: true \}/);
+  assert.match(request, /invalidateEmailVerificationToken/);
+});
+
+test('phone verification fails closed when no provider is configured', () => {
+  const phone = read('lib/auth/phone-verification.ts');
+  assert.match(phone, /PROVIDER_UNAVAILABLE/);
+  assert.match(phone, /SMS_PROVIDER === 'twilio'/);
+  assert.match(phone, /verified_phone_keys/);
+});
+
+test('operations and Firestore access require explicit verified business status', () => {
   const route = read('app/api/business/access/route.ts');
-  const access = read('lib/business/access.ts');
+  const feedback = read('app/api/business/projects/[projectId]/feedback/route.ts');
+  const rules = read('firestore.rules');
   assert.match(route, /requireVerifiedBusinessMembership/);
-  assert.match(access, /verificationStatus/);
-  assert.match(access, /BUSINESS_PENDING_VERIFICATION/);
-  assert.doesNotMatch(route, /getAdminDb\(\).*verification/);
+  assert.match(feedback, /requireVerifiedBusinessMembership/);
+  assert.match(rules, /isVerifiedBusiness/);
+  assert.match(rules, /verificationStatus == 'verified'/);
 });

@@ -5,7 +5,6 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithP
 import { auth } from '@/lib/firebase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { sendWelcomeEmail, sendWelcomeBackEmail } from '@/lib/email/actions';
 
 function authMessage(error: unknown) {
   const code = (error as AuthError)?.code;
@@ -34,7 +33,7 @@ function LoginContent() {
   const router = useRouter();
   const redirectPath = safeRedirect(searchParams.get('redirect'));
 
-  const finishAuth = async (idToken: string, isNewUser: boolean) => {
+  const finishAuth = async (idToken: string, isNewUser: boolean, requiresEmailVerification: boolean) => {
     const sessionResponse = await fetch('/api/auth/session', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -49,7 +48,17 @@ function LoginContent() {
     }
     setError('');
     if (isNewUser) {
+      if (requiresEmailVerification) {
+        await fetch('/api/auth/email/request', { method: 'POST' }).catch(() => undefined);
+        router.push('/verify-email');
+        return;
+      }
       router.push('/businesses/onboarding');
+      return;
+    }
+    if (requiresEmailVerification) {
+      await fetch('/api/auth/email/request', { method: 'POST' }).catch(() => undefined);
+      router.push('/verify-email');
       return;
     }
     const accessResponse = await fetch('/api/business/access', { cache: 'no-store' });
@@ -65,7 +74,7 @@ function LoginContent() {
     setLoading(true); setError('');
     try {
       const result = await signInWithPopup(auth, new GoogleAuthProvider());
-      await finishAuth(await result.user.getIdToken(), getAdditionalUserInfo(result)?.isNewUser === true);
+      await finishAuth(await result.user.getIdToken(), getAdditionalUserInfo(result)?.isNewUser === true, false);
     } catch (cause) { setError(errorMessage(cause)); setLoading(false); }
   };
 
@@ -75,15 +84,7 @@ function LoginContent() {
       const userCredential = isLogin
         ? await signInWithEmailAndPassword(auth, email, password)
         : await createUserWithEmailAndPassword(auth, email, password);
-      try {
-        const emailResult = isLogin
-          ? await sendWelcomeBackEmail(userCredential.user.email || email, email.split('@')[0])
-          : await sendWelcomeEmail(userCredential.user.email || email, email.split('@')[0]);
-        if (emailResult && !emailResult.success) console.error('Welcome email delivery failed:', emailResult.error);
-      } catch (emailError) {
-        console.error('Welcome email delivery failed:', emailError instanceof Error ? emailError.message : 'unknown');
-      }
-      await finishAuth(await userCredential.user.getIdToken(), !isLogin);
+      await finishAuth(await userCredential.user.getIdToken(), !isLogin, !userCredential.user.emailVerified);
     } catch (cause) {
       setError(errorMessage(cause));
       setLoading(false);

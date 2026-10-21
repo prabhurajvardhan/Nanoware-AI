@@ -44,9 +44,9 @@ export function membershipId(businessId: string, userId: string) {
 }
 
 function verificationStatus(data: FirebaseFirestore.DocumentData): VerificationStatus {
-  if (['not_started', 'pending_review', 'verified', 'rejected', 'suspended'].includes(data.verificationStatus)) return data.verificationStatus;
-  // Existing active businesses predate the verification gate and remain usable until migrated.
-  return data.status === 'active' ? 'verified' : 'not_started';
+  if (['not_started', 'pending_verification', 'pending_review', 'verified', 'more_information_required', 'rejected', 'suspended'].includes(data.verificationStatus)) return data.verificationStatus;
+  // Missing verification is intentionally not trusted; a later migration may write an explicit decision.
+  return 'pending_verification';
 }
 
 function businessSummary(businessId: string, data: FirebaseFirestore.DocumentData, membership: FirebaseFirestore.DocumentData): BusinessMembership {
@@ -110,11 +110,13 @@ export async function createInitialBusiness(input: { userId: string; email: stri
   const membership = membershipId(businessId, input.userId);
   const businessRef = db.collection('businesses').doc(businessId);
   const membershipRef = db.collection('memberships').doc(membership);
-  const registrationRef = db.collection('business_registration_keys').doc(registrationKey(verification.country, verification.registrationNumber));
+  const registrationRef = verification.registrationNumber
+    ? db.collection('business_registration_keys').doc(registrationKey(verification.countryCode, verification.registrationNumber))
+    : null;
 
   const existingBusiness = await businessRef.get();
   if (existingBusiness.exists && existingBusiness.data()?.verificationStatus === 'rejected') throw new BusinessVerificationError('REGISTRATION_REJECTED');
-  if (existingBusiness.exists && existingBusiness.data()?.verificationStatus === 'pending_review') {
+  if (existingBusiness.exists && ['pending_verification', 'pending_review', 'more_information_required'].includes(existingBusiness.data()?.verificationStatus)) {
     const existingVerification = existingBusiness.data()?.verification;
     const existingProof = existingVerification?.websiteProof;
     if (existingProof?.token && existingVerification?.website) {
@@ -136,19 +138,19 @@ export async function createInitialBusiness(input: { userId: string; email: stri
   const websiteCheck = await checkWebsiteOwnership(verification.website, proof);
 
   await db.runTransaction(async (transaction) => {
-    const [businessDoc, membershipDoc, registrationDoc, legacyProjects] = await Promise.all([
+    const [businessDoc, membershipDoc, legacyProjects] = await Promise.all([
       transaction.get(businessRef),
       transaction.get(membershipRef),
-      transaction.get(registrationRef),
       transaction.get(db.collection('projects').where('userId', '==', input.userId)),
     ]);
+    const registrationDoc = registrationRef ? await transaction.get(registrationRef) : null;
 
     if (membershipDoc.exists && businessDoc.exists) {
       if (businessDoc.data()?.verificationStatus === 'rejected') throw new BusinessVerificationError('REGISTRATION_REJECTED');
       return;
     }
-    const registration = registrationDoc.data();
-    if (registrationDoc.exists && registration?.businessId !== businessId) {
+    const registration = registrationDoc?.data();
+    if (registrationDoc?.exists && registration?.businessId !== businessId) {
       if (registration?.status === 'rejected') throw new BusinessVerificationError('REGISTRATION_REJECTED');
       throw new BusinessVerificationError('REGISTRATION_ALREADY_USED');
     }
@@ -160,18 +162,21 @@ export async function createInitialBusiness(input: { userId: string; email: stri
       slug: slugify(verification.tradeName),
       ownerId: input.userId,
       status: 'active',
-      verificationStatus: 'pending_review',
-      timezone: input.country === 'IN' ? 'Asia/Kolkata' : 'UTC',
+      verificationStatus: 'pending_verification',
+      timezone: verification.countryCode === 'IN' ? 'Asia/Kolkata' : 'UTC',
       contactEmail: verification.businessEmail,
       verification: {
         ...verification,
         submittedBy: input.userId,
         websiteProof: { ...proof, status: websiteCheck.status, method: websiteCheck.method, checkedAt: now },
         checks: {
-          registrationFormatValid: true,
-          businessEmailAccepted: !verification.emailDomainIsFree,
+          accountEmail: 'verified',
+          phone: 'pending',
           websiteOwnership: websiteCheck.status,
+          businessDomainEmail: verification.emailDomainIsFree ? 'not_provided' : 'pending',
+          googleBusinessProfile: 'not_provided',
         },
+        evidence: [{ evidenceType: 'website_ownership', status: websiteCheck.status, source: websiteCheck.method || 'unavailable', checkedAt: now }],
         reviewReason: null,
         reviewedBy: null,
         reviewedAt: null,
@@ -187,13 +192,13 @@ export async function createInitialBusiness(input: { userId: string; email: stri
       createdAt: now,
       updatedAt: now,
     }, { merge: true });
-    transaction.set(registrationRef, {
+    if (registrationRef) transaction.set(registrationRef, {
       businessId,
       userId: input.userId,
-      country: verification.country,
+      country: verification.countryCode,
       registrationType: verification.registrationType,
       status: 'pending_review',
-      createdAt: registrationDoc.exists ? registration?.createdAt : now,
+      createdAt: registrationDoc?.exists ? registration?.createdAt : now,
       updatedAt: now,
     }, { merge: true });
 

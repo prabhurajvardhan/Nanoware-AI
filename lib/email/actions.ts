@@ -283,3 +283,21 @@ export async function sendAdminNotification(title: string, eventType: string, su
     return { success: false, error: error?.message || String(error) };
   }
 }
+
+export async function sendBusinessVerificationStatusEmail(to: string, name: string, status: 'pending_review' | 'verified' | 'rejected' | 'suspended', reason?: string) {
+  try {
+    const resend = getResendClient();
+    const html = templates.businessVerificationStatusTemplate({ name, status, reason, url: getAppUrl() });
+    const subject = {
+      pending_review: 'Business verification received - Nanoware AI',
+      verified: 'Your business is verified - Nanoware AI',
+      rejected: 'Action needed on your business verification - Nanoware AI',
+      suspended: 'Business access update - Nanoware AI',
+    }[status];
+    const data = await resend.emails.send({ from: getFromAddress(), to, subject, html });
+    return { success: true, data };
+  } catch (error) {
+    console.error('Business verification email failed:', error instanceof Error ? error.message : 'unknown');
+    return { success: false };
+  }
+}

@@ -9,7 +9,7 @@ import DashboardContent from './DashboardContent';
 import { Loader2 } from 'lucide-react';
 import { OperationType, handleFirestoreError } from '@/lib/firestore-errors';
 
-type Business = { businessId: string; businessName: string; role: 'owner' | 'admin' | 'member'; businessStatus: string };
+type Business = { businessId: string; businessName: string; role: 'owner' | 'admin' | 'member'; businessStatus: string; verificationStatus: 'not_started' | 'pending_review' | 'verified' | 'rejected' | 'suspended' };
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
@@ -40,7 +40,7 @@ export default function DashboardPage() {
         const available = payload.businesses as Business[];
         setBusinesses(available);
         if (available.length === 0) router.replace('/businesses/onboarding');
-        else if (available.length === 1) { setProjectLoading(true); setSelectedBusinessId(available[0].businessId); }
+        else if (available.length === 1 && available[0].verificationStatus === 'verified') { setProjectLoading(true); setSelectedBusinessId(available[0].businessId); }
         else setSelectedBusinessId(null);
       })
       .catch(error => { if (!cancelled) setAccessError(error instanceof Error ? error.message : 'Unable to load business access.'); })
@@ -77,6 +77,9 @@ export default function DashboardPage() {
   if (loading || accessLoading || projectLoading) return <div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 text-brand-accent animate-spin" /></div>;
   if (!user) return null;
   if (accessError) return <div className="flex-1 flex items-center justify-center px-6"><div className="text-center"><h2 className="text-2xl font-heading text-brand-secondary">Workspace unavailable</h2><p className="text-slate-500 mt-2">{accessError}</p></div></div>;
+  if (businesses.length === 1 && businesses[0].verificationStatus !== 'verified') return (
+    <main className="flex-1 bg-slate-50 min-h-screen px-6 py-16"><div className="max-w-2xl mx-auto bg-white border border-slate-200 rounded-3xl p-8 shadow-sm"><p className="text-sm font-medium text-brand-accent">Business verification</p><h1 className="font-heading text-3xl text-brand-secondary mt-2">Your business is under review</h1><p className="mt-4 text-slate-600">{businesses[0].verificationStatus === 'rejected' ? 'This registration was rejected. Contact support for next steps.' : 'You can request Nanoware services while we review your business details. Operations tools become available after approval.'}</p><div className="mt-6 flex gap-4"><button onClick={() => router.push('/contact')} className="bg-brand-secondary text-white px-5 py-3 rounded-xl text-sm font-medium">Request a service</button><button onClick={() => router.push('/businesses/onboarding')} className="border border-slate-200 px-5 py-3 rounded-xl text-sm font-medium text-slate-700">View submission</button></div></div></main>
+  );
   if (businesses.length > 1 && !selectedBusinessId) return (
     <main className="flex-1 bg-slate-50 min-h-screen px-6 py-16"><div className="max-w-3xl mx-auto"><p className="text-sm font-medium text-brand-accent">Business workspaces</p><h1 className="font-heading text-3xl text-brand-secondary mt-2">Choose a workspace</h1><div className="grid gap-4 mt-8 md:grid-cols-2">{businesses.map(business => <button key={business.businessId} onClick={() => { setProjectLoading(true); setSelectedBusinessId(business.businessId); }} className="text-left bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:border-brand-accent"><span className="font-medium text-lg text-brand-secondary">{business.businessName}</span><span className="block mt-2 text-sm text-slate-500 capitalize">{business.role} access</span></button>)}</div></div></main>
   );

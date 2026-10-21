@@ -6,6 +6,7 @@ import { auth } from '@/lib/firebase';
 import { PageTransition } from '@/components/PageTransition';
 import { sendAcceptedEmailAction } from './actions';
 import AdminLogin from './AdminLogin';
+import VerificationQueue from './VerificationQueue';
 
 export default function AdminDashboard() {
   const [requests, setRequests] = useState<any[]>([]);
@@ -185,6 +186,7 @@ export default function AdminDashboard() {
                 ))}
              </div>
           )}
+          <VerificationQueue />
         </div>
       </div>
     </PageTransition>

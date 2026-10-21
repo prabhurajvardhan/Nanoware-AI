@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AuthBoundaryError, getVerifiedSession } from '@/lib/auth/server';
-import { BusinessAccessError, listBusinessMemberships, requireBusinessMembership } from '@/lib/business/access';
+import { BusinessAccessError, listBusinessMemberships, requireVerifiedBusinessMembership } from '@/lib/business/access';
 
 function errorResponse(error: unknown) {
   if (error instanceof AuthBoundaryError) {
@@ -8,7 +8,8 @@ function errorResponse(error: unknown) {
   }
   if (error instanceof BusinessAccessError) {
     const status = error.code === 'BUSINESS_NOT_FOUND' ? 404 : 403;
-    return NextResponse.json({ error: status === 404 ? 'Business not found.' : 'Business access denied.' }, { status });
+    const message = error.code === 'BUSINESS_PENDING_VERIFICATION' ? 'Business verification is pending.' : status === 404 ? 'Business not found.' : 'Business access denied.';
+    return NextResponse.json({ error: message }, { status });
   }
   console.error('Business access lookup failed:', error instanceof Error ? error.message : 'unknown error');
   return NextResponse.json({ error: 'Unable to load business access.' }, { status: 500 });
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
     const session = await getVerifiedSession();
     const businessId = request.nextUrl.searchParams.get('businessId');
     if (businessId) {
-      const business = await requireBusinessMembership(session.uid, businessId);
+      const business = await requireVerifiedBusinessMembership(session.uid, businessId);
       return NextResponse.json({ businesses: [business], selectedBusinessId: business.businessId });
     }
     const businesses = await listBusinessMemberships(session.uid);

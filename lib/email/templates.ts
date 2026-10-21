@@ -393,3 +393,19 @@ export function adminNotificationTemplate(title: string, eventType: string, summ
     ` : ''}
   `);
 }
+
+export function businessVerificationStatusTemplate(data: { name: string; status: 'pending_review' | 'verified' | 'rejected' | 'suspended'; reason?: string; url: string }) {
+  const copy = {
+    pending_review: ['Business verification received', 'Your business details are in the review queue. We will notify you when a decision is available.'],
+    verified: ['Business verified', 'Your business has been verified. You can now continue setting up your Nanoware workspace.'],
+    rejected: ['Business verification needs attention', 'We could not verify this business registration. Review the reason below and contact support if you need help.'],
+    suspended: ['Business access suspended', 'Access to this business workspace has been suspended. Contact support for next steps.'],
+  }[data.status];
+  return baseLayout(`
+    <h1>${escapeHtml(copy[0])}</h1>
+    <p>Hello ${escapeHtml(data.name)},</p>
+    <p>${escapeHtml(copy[1])}</p>
+    ${data.reason ? `<div class="highlight-box"><div class="highlight-label">Review note</div><p style="margin-bottom: 0;">${escapeHtml(data.reason)}</p></div>` : ''}
+    <div class="button-container"><a href="${escapeHtml(data.url)}/dashboard" class="button">Open Nanoware AI</a></div>
+  `);
+}

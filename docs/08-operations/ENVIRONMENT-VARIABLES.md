@@ -7,7 +7,7 @@
 | Name | Evidence/purpose | Exposure |
 |---|---|---|
 | `GEMINI_API_KEY` | `.env.example`; intended AI provider key | Server only; provider unverified |
-| `APP_URL` | `.env.example` and email links | Server/config |
+| `APP_URL` | `.env.example` and email links; must be an absolute HTTPS origin in production | Server/config |
 | `RESEND_API_KEY` | Resend client | Server only |
 | `ADMIN_EMAIL` | Admin notification recipient | Server/config |
 | `EMAIL_FROM` | Used by email actions | Server/config; not in example |
@@ -27,3 +27,5 @@ Values are not reproduced here. Confirm every runtime variable, secret manager, 
 The previous implementation did not send an account-verification message at all: signup sent a welcome email, used a fallback `hello@nanowareai.in` sender when `EMAIL_FROM` was absent, and swallowed delivery failures in the browser. Resend requires both a valid API key and a sender identity/domain verified in the Resend project. The repaired flow requires explicit `EMAIL_FROM`, sends a single-use 30-minute link, logs only a non-sensitive delivery failure, and exposes a retryable UI state. No production Resend delivery logs were available in this repository, so provider-level rejection codes must still be confirmed in the Resend dashboard after deployment.
 
 Phone verification is deliberately fail-closed when `SMS_PROVIDER` and the Twilio variables are absent; the UI says that SMS is not configured rather than claiming a number was verified.
+
+The first supported phone countries are India (`+91`), United States (`+1`), Canada (`+1`), Australia (`+61`), and United Kingdom (`+44`). The selector and server normalizer must agree on the selected country and national-number length. A configured Twilio account that rejects a request returns a safe provider-failure message; provider response bodies and credentials are never sent to the browser.

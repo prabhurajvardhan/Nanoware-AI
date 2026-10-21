@@ -1,8 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { normalizePhone } from '../lib/auth/phone-format.ts';
+import { domainMatchesWebsite } from '../lib/business/domain-format.ts';
 
 const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+
+test('phone normalization applies selected country calling codes and national lengths', () => {
+  assert.equal(normalizePhone('IN', '09876543210'), '+919876543210');
+  assert.equal(normalizePhone('US', '(415) 555-2671'), '+14155552671');
+  assert.equal(normalizePhone('GB', '07123 456789'), '+447123456789');
+  assert.throws(() => normalizePhone('IN', '+14155552671'), /INVALID_PHONE/);
+});
+
+test('business-domain matching normalizes schemes, ports, www, and subdomains without suffix tricks', () => {
+  assert.equal(domainMatchesWebsite('owner@example.com', 'https://WWW.Example.com:443/path'), true);
+  assert.equal(domainMatchesWebsite('owner@shop.example.com', 'example.com'), true);
+  assert.equal(domainMatchesWebsite('owner@example.com.evil', 'example.com'), false);
+  assert.equal(domainMatchesWebsite('owner@notexample.com', 'example.com'), false);
+});
 
  test('universal onboarding uses country-neutral business signals', () => {
   const verification = read('lib/business/verification.ts');
@@ -38,6 +54,15 @@ test('phone verification fails closed when no provider is configured', () => {
   assert.match(phone, /PROVIDER_UNAVAILABLE/);
   assert.match(phone, /SMS_PROVIDER === 'twilio'/);
   assert.match(phone, /verified_phone_keys/);
+  assert.match(phone, /transaction\.update\(challengeRef, \{ attempts/);
+  assert.match(phone, /return \{ ok: false/);
+});
+
+test('account verification checks current Firebase email before updating verification state', () => {
+  const email = read('lib/auth/email-verification.ts');
+  assert.match(email, /getUser\(uid\)/);
+  assert.match(email, /tokenData\.emailHash !== hash\(currentEmail\)/);
+  assert.doesNotMatch(email, /tokenClaim === true/);
 });
 
 test('operations and Firestore access require explicit verified business status', () => {

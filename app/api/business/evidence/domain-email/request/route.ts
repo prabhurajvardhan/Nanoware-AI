@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof AuthBoundaryError) return NextResponse.json({ error: error.code === 'EMAIL_VERIFICATION_REQUIRED' ? 'Verify your account email first.' : 'Authentication required.' }, { status: error.code === 'EMAIL_VERIFICATION_REQUIRED' ? 403 : 401 });
     if (error instanceof BusinessAccessError) return NextResponse.json({ error: 'Business access denied.' }, { status: 403 });
-    if (error instanceof DomainEmailVerificationError) return NextResponse.json({ error: error.code === 'MISMATCH' ? 'That email domain does not match the claimed website.' : error.code === 'RATE_LIMITED' ? 'Please wait before requesting another link.' : 'Enter a valid business email.' }, { status: error.code === 'RATE_LIMITED' ? 429 : 400 });
+    if (error instanceof DomainEmailVerificationError) return NextResponse.json({ error: error.code === 'MISMATCH' ? 'Use an email on the website domain or one of its subdomains, for example you@example.com for example.com. This signal is optional for local businesses.' : error.code === 'RATE_LIMITED' ? 'Please wait before requesting another link.' : 'Enter a valid business email.' }, { status: error.code === 'RATE_LIMITED' ? 429 : 400 });
     console.error('Business-domain email request failed:', error instanceof Error ? error.message : 'unknown');
     return NextResponse.json({ error: 'Unable to request business email verification.' }, { status: 500 });
   }

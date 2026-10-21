@@ -62,10 +62,15 @@ export async function consumeEmailVerificationToken(token: string) {
   if (Number(tokenData.expiresAt || 0) <= Date.now()) throw new EmailVerificationError('TOKEN_EXPIRED');
   const uid = typeof tokenData.uid === 'string' ? tokenData.uid : '';
   if (!uid) throw new EmailVerificationError('INVALID_TOKEN');
+  let currentEmail = '';
 
   try {
+    const currentUser = await getAuth(getFirebaseAdminApp()).getUser(uid);
+    currentEmail = currentUser.email?.toLowerCase() || '';
+    if (!currentEmail || tokenData.emailHash !== hash(currentEmail) || currentUser.emailVerified === true) throw new EmailVerificationError('INVALID_TOKEN');
     await getAuth(getFirebaseAdminApp()).updateUser(uid, { emailVerified: true });
   } catch {
+    if (currentEmail) throw new EmailVerificationError('INVALID_TOKEN');
     throw new EmailVerificationError('ACCOUNT_NOT_FOUND');
   }
 
@@ -92,8 +97,7 @@ export async function invalidateEmailVerificationToken(token: string, uid: strin
   await db.collection('email_verification_rate').doc(uid).delete().catch(() => undefined);
 }
 
-export async function isEmailVerified(uid: string, tokenClaim?: boolean) {
-  if (tokenClaim === true) return true;
+export async function isEmailVerified(uid: string) {
   try {
     const user = await getAuth(getFirebaseAdminApp()).getUser(uid);
     return user.emailVerified === true;

@@ -1,11 +1,11 @@
 import crypto from 'node:crypto';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb } from '@/lib/firebase-admin';
+import { normalizePhone as formatPhone } from './phone-format';
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
 const MAX_ATTEMPTS = 5;
-const COUNTRY_CALLING_CODES: Record<string, string> = { US: '1', CA: '1', AU: '61', GB: '44', IN: '91' };
 
 export class PhoneVerificationError extends Error {
   constructor(public readonly code: 'INVALID_PHONE' | 'PROVIDER_UNAVAILABLE' | 'RATE_LIMITED' | 'INVALID_CODE' | 'EXPIRED' | 'ATTEMPTS_EXCEEDED' | 'PHONE_REUSED' | 'SEND_FAILED') {
@@ -17,12 +17,7 @@ export class PhoneVerificationError extends Error {
 function hash(value: string) { return crypto.createHash('sha256').update(value).digest('hex'); }
 
 export function normalizePhone(countryCode: string, raw: string) {
-  const value = String(raw || '').trim();
-  if (!/^[A-Z]{2}$/.test(countryCode)) throw new PhoneVerificationError('INVALID_PHONE');
-  const digits = value.replace(/[()\s-]/g, '');
-  const withCountry = digits.startsWith('+') ? digits.slice(1) : `${COUNTRY_CALLING_CODES[countryCode] || ''}${digits.replace(/^0+/, '')}`;
-  if (!/^\d{8,15}$/.test(withCountry) || withCountry.startsWith('0')) throw new PhoneVerificationError('INVALID_PHONE');
-  return `+${withCountry}`;
+  try { return formatPhone(countryCode, raw); } catch { throw new PhoneVerificationError('INVALID_PHONE'); }
 }
 
 function providerConfigured() {
@@ -63,27 +58,24 @@ export async function consumePhoneOtp(input: { uid: string; code: string }) {
   if (!/^\d{6}$/.test(input.code)) throw new PhoneVerificationError('INVALID_CODE');
   const db = getAdminDb();
   const challengeRef = db.collection('phone_verification_challenges').doc(input.uid);
-  const result = await db.runTransaction(async (transaction) => {
+  const outcome = await db.runTransaction(async (transaction) => {
     const challenge = await transaction.get(challengeRef);
     const data = challenge.data();
     if (!challenge.exists || !data || data.consumed || Number(data.expiresAt || 0) <= Date.now()) throw new PhoneVerificationError('EXPIRED');
-    const attempts = Number(data.attempts || 0) + 1;
-    if (attempts > MAX_ATTEMPTS) throw new PhoneVerificationError('ATTEMPTS_EXCEEDED');
+    const attempts = Math.min(Number(data.attempts || 0) + 1, MAX_ATTEMPTS);
     if (data.codeHash !== hash(input.code)) {
       transaction.update(challengeRef, { attempts, updatedAt: FieldValue.serverTimestamp() });
-      throw new PhoneVerificationError('INVALID_CODE');
+      return { ok: false as const, code: attempts >= MAX_ATTEMPTS ? 'ATTEMPTS_EXCEEDED' as const : 'INVALID_CODE' as const };
     }
     const phoneKeyRef = db.collection('verified_phone_keys').doc(data.phoneHash);
     const phoneKey = await transaction.get(phoneKeyRef);
     if (phoneKey.exists && phoneKey.data()?.uid !== input.uid) throw new PhoneVerificationError('PHONE_REUSED');
-    transaction.update(challengeRef, { consumed: true, verifiedAt: FieldValue.serverTimestamp() });
+    transaction.update(challengeRef, { consumed: true, verifiedAt: FieldValue.serverTimestamp(), attempts });
     transaction.set(phoneKeyRef, { uid: input.uid, verifiedAt: FieldValue.serverTimestamp() }, { merge: true });
     transaction.set(db.collection('accounts').doc(input.uid), { phoneVerification: { status: 'verified', phoneHash: data.phoneHash, verifiedAt: FieldValue.serverTimestamp() }, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    return true;
+    return { ok: true as const };
   });
-  await db.collection('businesses').doc(`business_${input.uid}`).update({
-    'verification.checks.phone': 'verified',
-    updatedAt: FieldValue.serverTimestamp(),
-  }).catch(() => undefined);
-  return result;
+  if (!outcome.ok) throw new PhoneVerificationError(outcome.code);
+  await db.collection('businesses').doc(`business_${input.uid}`).update({ 'verification.checks.phone': 'verified', updatedAt: FieldValue.serverTimestamp() }).catch(() => undefined);
+  return true;
 }

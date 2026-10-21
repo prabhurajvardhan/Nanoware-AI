@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb } from '@/lib/firebase-admin';
+import { domainMatchesWebsite, emailDomain } from './domain-format';
 
 const TTL_MS = 30 * 60 * 1000;
 const COOLDOWN_MS = 60 * 1000;
@@ -10,19 +11,9 @@ export class DomainEmailVerificationError extends Error {
   constructor(public readonly code: 'INVALID_EMAIL' | 'MISMATCH' | 'RATE_LIMITED' | 'INVALID_TOKEN' | 'EXPIRED' | 'USED') { super(code); this.name = 'DomainEmailVerificationError'; }
 }
 
-function hostFor(value: string) {
-  try { return new URL(value.startsWith('http') ? value : `https://${value}`).hostname.toLowerCase().replace(/^www\./, ''); } catch { return ''; }
-}
-
-export function domainMatchesWebsite(email: string, website: string) {
-  const domain = email.split('@')[1]?.toLowerCase() || '';
-  const host = hostFor(website);
-  return !!domain && !!host && (domain === host || domain.endsWith(`.${host}`));
-}
-
 export async function issueDomainEmailToken(input: { uid: string; businessId: string; email: string; website: string }) {
   const email = input.email.trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new DomainEmailVerificationError('INVALID_EMAIL');
+  if (!/^[^\s@]+@[^\s@]+(?:\.[^\s@]+)+$/.test(email) || !emailDomain(email)) throw new DomainEmailVerificationError('INVALID_EMAIL');
   if (!domainMatchesWebsite(email, input.website)) throw new DomainEmailVerificationError('MISMATCH');
   const token = crypto.randomBytes(32).toString('hex');
   const db = getAdminDb();

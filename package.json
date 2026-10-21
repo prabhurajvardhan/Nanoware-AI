@@ -58,6 +58,9 @@
   },
   "overrides": {
     "proxy-addr": "2.0.8",
-    "websocket-driver": "0.7.5"
+    "websocket-driver": "0.7.5",
+    "firebase-admin": {
+      "jwks-rsa": "3.2.2"
+    }
   }
 }

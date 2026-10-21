@@ -17,8 +17,8 @@ export async function POST(req: NextRequest) {
     }
     
     return NextResponse.json({ success: true, message: 'Emails dispatched successfully' });
-  } catch (error) {
-    console.error('Email API error:', error);
+  } catch {
+    console.error('Email API request failed.');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

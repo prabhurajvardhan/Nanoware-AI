@@ -1,322 +1,181 @@
 'use server';
 
 import { getResendClient } from './client';
+import { sendEmailWithResend, type EmailDeliveryResult } from './delivery';
 import * as templates from './templates';
 
-// Helper to get from address
-const getFromAddress = () => {
-  const value = process.env.EMAIL_FROM?.trim();
-  if (!value) throw new Error('EMAIL_FROM_MISSING');
-  return value;
-};
+const getAdminAddress = () => process.env.ADMIN_EMAIL || 'admin@nanoware.ai';
+const getAppUrl = () => process.env.APP_URL || 'http://localhost:3000';
 
-const getAdminAddress = () => {
-  return process.env.ADMIN_EMAIL || 'admin@nanoware.ai';
-};
+async function sendEmail(to: string, subject: string, html: string): Promise<EmailDeliveryResult> {
+  return sendEmailWithResend(
+    (payload) => getResendClient().emails.send(payload),
+    process.env.EMAIL_FROM,
+    { to, subject, html },
+  );
+}
 
-const getAppUrl = () => {
-  return process.env.APP_URL || 'http://localhost:3000';
-};
+function actionFailure(context: string) {
+  // Context is a fixed internal label; never log exceptions, recipients, tokens, or message content.
+  console.error(`Email helper failed before confirmed delivery: ${context}`);
+  return { success: false as const, error: 'EMAIL_DELIVERY_UNCONFIRMED' as const };
+}
 
-/**
- * Send Welcome Email
- */
 export async function sendWelcomeEmail(to: string, name: string) {
   try {
-    const resend = getResendClient();
-    const html = templates.welcomeEmailTemplate(name, getAppUrl());
-    
-    const data = await resend.emails.send({
-      from: getFromAddress(),
-      to,
-      subject: 'Welcome to Nanoware AI',
-      html,
-    });
-    
-    // Also notify admin of new signup
-    await sendAdminNotification(
+    const delivery = await sendEmail(to, 'Welcome to Nanoware AI', templates.welcomeEmailTemplate(name, getAppUrl()));
+    if (!delivery.success) return delivery;
+    const admin = await sendAdminNotification(
       'New User Signup',
       'signup',
       `A new user has signed up for Nanoware AI: ${name}`,
-      { Email: to, Name: name, Date: new Date().toISOString() }
+      { Email: to, Name: name, Date: new Date().toISOString() },
     );
-    
-    return { success: true, data };
-  } catch (error: any) {
-    console.error('Failed to send welcome email:', error);
-    return { success: false, error: error?.message || String(error) };
+    if (!admin.success) return admin;
+    return { success: true as const, data: delivery.data };
+  } catch {
+    return actionFailure('welcome');
   }
 }
 
-/**
- * Send Authentication/Security Email
- */
 export async function sendAuthEmail(to: string, title: string, message: string, code?: string) {
   try {
-    const resend = getResendClient();
-    const html = templates.authEmailTemplate(title, message, code);
-    
-    const data = await resend.emails.send({
-      from: getFromAddress(),
-      to,
-      subject: title,
-      html,
-    });
-    
-    return { success: true, data };
-  } catch (error: any) {
-    console.error('Failed to send auth email:', error);
-    return { success: false, error: error?.message || String(error) };
+    return await sendEmail(to, title, templates.authEmailTemplate(title, message, code));
+  } catch {
+    return actionFailure('authentication');
   }
 }
 
-/**
- * Send Revenue Report Email
- */
 export async function sendRevenueReportEmail(to: string, name: string, loss: number, recoverable: number) {
   try {
-    const resend = getResendClient();
-    const html = templates.revenueReportEmailTemplate({
+    const delivery = await sendEmail(to, 'Your Nanoware AI Revenue Analysis', templates.revenueReportEmailTemplate({
       name,
       loss,
       recoverable,
-      url: getAppUrl()
-    });
-    
-    const data = await resend.emails.send({
-      from: getFromAddress(),
-      to,
-      subject: 'Your Nanoware AI Revenue Analysis',
-      html,
-    });
-    
-    // Notify admin
-    await sendAdminNotification(
+      url: getAppUrl(),
+    }));
+    if (!delivery.success) return delivery;
+    const admin = await sendAdminNotification(
       'Revenue Report Generated',
       'revenue_report',
       `A user generated a revenue loss report showing an estimated loss of $${loss.toLocaleString()}.`,
-      { Email: to, Name: name, 'Calculated Loss': `$${loss.toLocaleString()}` }
+      { Email: to, Name: name, 'Calculated Loss': `$${loss.toLocaleString()}` },
     );
-    
-    return { success: true, data };
-  } catch (error: any) {
-    console.error('Failed to send revenue report email:', error);
-    return { success: false, error: error?.message || String(error) };
+    if (!admin.success) return admin;
+    return { success: true as const, data: delivery.data };
+  } catch {
+    return actionFailure('revenue-report');
   }
 }
 
-/**
- * Send Welcome Back Email
- */
 export async function sendWelcomeBackEmail(to: string, name: string) {
   try {
-    const resend = getResendClient();
-    const html = templates.welcomeBackEmailTemplate(name, getAppUrl());
-    
-    const data = await resend.emails.send({
-      from: getFromAddress(),
-      to,
-      subject: 'Welcome Back to Nanoware AI',
-      html,
-    });
-    
-    return { success: true, data };
-  } catch (error: any) {
-    console.error('Failed to send welcome back email:', error);
-    return { success: false, error: error?.message || String(error) };
+    return await sendEmail(to, 'Welcome Back to Nanoware AI', templates.welcomeBackEmailTemplate(name, getAppUrl()));
+  } catch {
+    return actionFailure('welcome-back');
   }
 }
 
-/**
- * Send Request Accepted Email
- */
 export async function sendRequestAcceptedEmail(to: string, name: string, service: string) {
   try {
-    const resend = getResendClient();
-    const html = templates.requestAcceptedTemplate(name, service, getAppUrl());
-    
-    const data = await resend.emails.send({
-      from: getFromAddress(),
-      to,
-      subject: `Update: Your request for ${service} has been accepted`,
-      html,
-    });
-    
-    // Also notify admin that the acceptance email was successfully sent
-    await sendAdminNotification(
+    const delivery = await sendEmail(to, `Update: Your request for ${service} has been accepted`, templates.requestAcceptedTemplate(name, service, getAppUrl()));
+    if (!delivery.success) return delivery;
+    const admin = await sendAdminNotification(
       'Service Request Accepted email sent',
       'request_accepted',
       `An acceptance email was sent to ${to} for service: ${service}`,
-      { Email: to, Name: name, Service: service }
+      { Email: to, Name: name, Service: service },
     );
-    
-    return { success: true, data };
-  } catch (error: any) {
-    console.error('Failed to send request accepted email:', error);
-    return { success: false, error: error?.message || String(error) };
+    if (!admin.success) return admin;
+    return { success: true as const, data: delivery.data };
+  } catch {
+    return actionFailure('request-accepted');
   }
 }
 
-/**
- * Send Solution Request Emails (User & Admin)
- */
 export async function sendSolutionRequestEmails(userEmail: string, userName: string, service: string, details: string, estimatedLoss?: number) {
   try {
-    const resend = getResendClient();
-    
-    // Send to user
-    const userHtml = templates.requestSolutionUserTemplate(userName, service);
-    await resend.emails.send({
-      from: getFromAddress(),
-      to: userEmail,
-      subject: 'Request Received - Nanoware AI',
-      html: userHtml,
-    });
-    
-    // Send to Admin
-    const adminHtml = templates.requestSolutionAdminTemplate({
-      name: userName,
-      email: userEmail,
-      service,
-      details,
-      estimatedLoss
-    });
-    await resend.emails.send({
-      from: getFromAddress(),
-      to: getAdminAddress(),
-      subject: `New Solution Request: ${service}`,
-      html: adminHtml,
-    });
-    
-    return { success: true };
-  } catch (error: any) {
-    console.error('Failed to send solution request emails:', error);
-    return { success: false, error: error?.message || String(error) };
+    const user = await sendEmail(userEmail, 'Request Received - Nanoware AI', templates.requestSolutionUserTemplate(userName, service));
+    if (!user.success) return user;
+    const admin = await sendEmail(
+      getAdminAddress(),
+      `New Solution Request: ${service}`,
+      templates.requestSolutionAdminTemplate({ name: userName, email: userEmail, service, details, estimatedLoss }),
+    );
+    if (!admin.success) return admin;
+    return { success: true as const };
+  } catch {
+    return actionFailure('solution-request');
   }
 }
 
-/**
- * Send Payment/Invoice Email
- */
 export async function sendPaymentEmail(to: string, type: 'success' | 'failed' | 'invoice', amount: number, id: string) {
   try {
-    const resend = getResendClient();
-    const html = templates.paymentEmailTemplate({
+    const subjectMap = {
+      success: 'Payment Receipt - Nanoware AI',
+      failed: 'Action Required: Payment Failed',
+      invoice: 'New Invoice Available',
+    };
+    const delivery = await sendEmail(to, subjectMap[type], templates.paymentEmailTemplate({
       type,
       amount,
       id,
       date: new Date().toLocaleDateString(),
-      supportUrl: `${getAppUrl()}/contact`
-    });
-    
-    const subjectMap = {
-      success: 'Payment Receipt - Nanoware AI',
-      failed: 'Action Required: Payment Failed',
-      invoice: 'New Invoice Available'
-    };
-    
-    const data = await resend.emails.send({
-      from: getFromAddress(),
-      to,
-      subject: subjectMap[type],
-      html,
-    });
-    
-    // Notify admin appropriately
-    await sendAdminNotification(
+      supportUrl: `${getAppUrl()}/contact`,
+    }));
+    if (!delivery.success) return delivery;
+    const admin = await sendAdminNotification(
       `Payment Event: ${type.toUpperCase()}`,
       `payment_${type}`,
       `A payment transaction for $${amount} was marked as ${type}.`,
-      { Email: to, 'Transaction ID': id, Amount: `$${amount}` }
+      { Email: to, 'Transaction ID': id, Amount: `$${amount}` },
     );
-    
-    return { success: true, data };
-  } catch (error: any) {
-    console.error('Failed to send payment email:', error);
-    return { success: false, error: error?.message || String(error) };
+    if (!admin.success) return admin;
+    return { success: true as const, data: delivery.data };
+  } catch {
+    return actionFailure('payment');
   }
 }
 
-/**
- * Send OTP for 2-Step Verification
- */
 export async function sendAdminOtpEmail(to: string, code: string) {
   try {
-    const resend = getResendClient();
     const html = templates.authEmailTemplate(
       'Admin Portal Login Verification',
       'Please use the following 6-digit code to complete your login to the Nanoware Admin Dashboard.',
-      code
+      code,
     );
-    
-    const data = await resend.emails.send({
-      from: getFromAddress(),
-      to,
-      subject: 'Nanoware Admin Login Verification Code',
-      html,
-    });
-    
-    return { success: true, data };
-  } catch (error: any) {
-    console.error('Failed to send Admin OTP email:', error);
-    return { success: false, error: error?.message || String(error) };
+    return await sendEmail(to, 'Nanoware Admin Login Verification Code', html);
+  } catch {
+    return actionFailure('admin-otp');
   }
 }
 
 export async function sendAccountEmailVerificationEmail(to: string, name: string, verifyUrl: string) {
   try {
-    const resend = getResendClient();
-    const html = templates.accountEmailVerificationTemplate(name, verifyUrl);
-    const data = await resend.emails.send({
-      from: getFromAddress(),
-      to,
-      subject: 'Verify your Nanoware AI email address',
-      html,
-    });
-    return { success: true, data };
-  } catch (error) {
-    console.error('Account email verification delivery failed:', error instanceof Error ? error.message : 'unknown');
-    return { success: false };
+    return await sendEmail(to, 'Verify your Nanoware AI email address', templates.accountEmailVerificationTemplate(name, verifyUrl));
+  } catch {
+    return actionFailure('account-verification');
   }
 }
 
 export async function sendBusinessDomainEmailVerificationEmail(to: string, name: string, verifyUrl: string) {
   try {
-    const resend = getResendClient();
-    const data = await resend.emails.send({ from: getFromAddress(), to, subject: 'Verify your business email domain - Nanoware AI', html: templates.businessDomainEmailVerificationTemplate(name, verifyUrl) });
-    return { success: true, data };
-  } catch (error) {
-    console.error('Business-domain email verification delivery failed:', error instanceof Error ? error.message : 'unknown');
-    return { success: false };
+    return await sendEmail(to, 'Verify your business email domain - Nanoware AI', templates.businessDomainEmailVerificationTemplate(name, verifyUrl));
+  } catch {
+    return actionFailure('business-domain-verification');
   }
 }
 
-/**
- * Generic Admin Notification
- */
 export async function sendAdminNotification(title: string, eventType: string, summary: string, metadata: Record<string, string> = {}) {
   try {
-    const resend = getResendClient();
-    const html = templates.adminNotificationTemplate(title, eventType, summary, metadata, getAppUrl());
-    
-    const data = await resend.emails.send({
-      from: getFromAddress(),
-      to: getAdminAddress(),
-      subject: `[SYSTEM] ${title}`,
-      html,
-    });
-    
-    return { success: true, data };
-  } catch (error: any) {
-    console.error('Failed to send admin notification:', error);
-    return { success: false, error: error?.message || String(error) };
+    return await sendEmail(getAdminAddress(), `[SYSTEM] ${title}`, templates.adminNotificationTemplate(title, eventType, summary, metadata, getAppUrl()));
+  } catch {
+    return actionFailure('admin-notification');
   }
 }
 
 export async function sendBusinessVerificationStatusEmail(to: string, name: string, status: 'pending_verification' | 'pending_review' | 'verified' | 'more_information_required' | 'rejected' | 'suspended', reason?: string) {
   try {
-    const resend = getResendClient();
-    const html = templates.businessVerificationStatusTemplate({ name, status, reason, url: getAppUrl() });
     const subject = {
       pending_verification: 'Business verification started - Nanoware AI',
       pending_review: 'Business verification received - Nanoware AI',
@@ -325,10 +184,8 @@ export async function sendBusinessVerificationStatusEmail(to: string, name: stri
       rejected: 'Action needed on your business verification - Nanoware AI',
       suspended: 'Business access update - Nanoware AI',
     }[status];
-    const data = await resend.emails.send({ from: getFromAddress(), to, subject, html });
-    return { success: true, data };
-  } catch (error) {
-    console.error('Business verification email failed:', error instanceof Error ? error.message : 'unknown');
-    return { success: false };
+    return await sendEmail(to, subject, templates.businessVerificationStatusTemplate({ name, status, reason, url: getAppUrl() }));
+  } catch {
+    return actionFailure('business-status');
   }
 }

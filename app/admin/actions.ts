@@ -46,8 +46,8 @@ export async function sendAcceptedEmailAction(requestId: string) {
 
     await requestRef.update({ status: 'accepted', acceptanceState: 'sent', acceptedAt: FieldValue.serverTimestamp(), acceptedBy: actor.uid, acceptanceClaimedAt: null });
     return { success: true };
-  } catch (error) {
-    console.error('Accepted request action failed:', error instanceof Error ? error.message : 'unknown error');
+  } catch {
+    console.error('Accepted request action failed.');
     return { success: false, error: 'Unable to process the request.' };
   }
 }

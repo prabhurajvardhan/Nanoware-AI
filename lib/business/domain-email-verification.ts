@@ -63,3 +63,22 @@ export async function invalidateDomainEmailTokens(uid: string, businessId: strin
   matching.forEach((doc) => batch.delete(doc.ref));
   await batch.commit();
 }
+
+export async function invalidateDomainEmailToken(token: string, uid: string): Promise<boolean> {
+  const db = getAdminDb();
+  const tokenRef = db.collection('business_domain_email_tokens').doc(hash(token));
+  let invalidated = false;
+  try {
+    await tokenRef.delete();
+    invalidated = true;
+  } catch {
+    try {
+      await tokenRef.update({ used: true, expiresAt: Date.now() });
+      invalidated = true;
+    } catch {
+      invalidated = false;
+    }
+  }
+  await db.collection('business_domain_email_rate').doc(uid).delete().catch(() => undefined);
+  return invalidated;
+}

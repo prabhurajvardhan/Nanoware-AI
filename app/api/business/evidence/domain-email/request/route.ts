@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AuthBoundaryError, requireEmailVerifiedSession } from '@/lib/auth/server';
 import { BusinessAccessError, requireBusinessMembership } from '@/lib/business/access';
-import { issueDomainEmailToken, DomainEmailVerificationError } from '@/lib/business/domain-email-verification';
+import { issueDomainEmailToken, invalidateDomainEmailToken, DomainEmailVerificationError } from '@/lib/business/domain-email-verification';
 import { sendBusinessDomainEmailVerificationEmail } from '@/lib/email/actions';
+import { attemptVerificationEmail } from '@/lib/email/delivery';
 import { getAdminDb } from '@/lib/firebase-admin';
+import crypto from 'node:crypto';
 
 export async function POST(request: NextRequest) {
+  const requestId = crypto.randomUUID();
   try {
     const session = await requireEmailVerifiedSession();
     const body = await request.json() as { businessId?: unknown; email?: unknown };
@@ -27,14 +30,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email verification is unavailable because the application URL is misconfigured.' }, { status: 503 });
     }
     const issued = await issueDomainEmailToken({ uid: session.uid, businessId, email, website });
-    const delivery = await sendBusinessDomainEmailVerificationEmail(issued.email, business.data()?.name || 'Business owner', `${origin}/api/business/evidence/domain-email/verify?token=${issued.token}`);
-    if (!delivery.success) return NextResponse.json({ error: 'Email delivery is temporarily unavailable.' }, { status: 503 });
+    const attempt = await attemptVerificationEmail(
+      () => sendBusinessDomainEmailVerificationEmail(issued.email, business.data()?.name || 'Business owner', `${origin}/api/business/evidence/domain-email/verify?token=${issued.token}`),
+      () => invalidateDomainEmailToken(issued.token, session.uid),
+    );
+    if (!attempt.success) {
+      if (!attempt.tokenInvalidated) console.error('Business-domain verification token cleanup incomplete:', requestId);
+      console.error('Business-domain email verification delivery unavailable:', requestId);
+      return NextResponse.json({ error: 'Email delivery is temporarily unavailable.', requestId }, { status: 503 });
+    }
     return NextResponse.json({ success: true, expiresAt: issued.expiresAt });
   } catch (error) {
     if (error instanceof AuthBoundaryError) return NextResponse.json({ error: error.code === 'EMAIL_VERIFICATION_REQUIRED' ? 'Verify your account email first.' : 'Authentication required.' }, { status: error.code === 'EMAIL_VERIFICATION_REQUIRED' ? 403 : 401 });
     if (error instanceof BusinessAccessError) return NextResponse.json({ error: 'Business access denied.' }, { status: 403 });
     if (error instanceof DomainEmailVerificationError) return NextResponse.json({ error: error.code === 'MISMATCH' ? 'Use the submitted business email on the website domain or one of its subdomains, for example you@example.com for example.com.' : error.code === 'RATE_LIMITED' ? 'Please wait before requesting another link.' : 'Enter a valid business email.' }, { status: error.code === 'RATE_LIMITED' ? 429 : 400 });
-    console.error('Business-domain email request failed:', error instanceof Error ? error.message : 'unknown');
-    return NextResponse.json({ error: 'Unable to request business email verification.' }, { status: 500 });
+    console.error('Business-domain email request failed:', requestId);
+    return NextResponse.json({ error: 'Unable to request business email verification.', requestId }, { status: 500 });
   }
 }

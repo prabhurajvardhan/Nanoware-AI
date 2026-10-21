@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     await consumeDomainEmailToken(token);
     url.searchParams.set('domainEmailVerified', '1');
   } catch (error) {
-    if (!(error instanceof DomainEmailVerificationError)) console.error('Business-domain email callback failed:', error instanceof Error ? error.message : 'unknown');
+    if (!(error instanceof DomainEmailVerificationError)) console.error('Business-domain email callback failed.');
     url.searchParams.set('domainEmailError', '1');
   }
   return NextResponse.redirect(url);

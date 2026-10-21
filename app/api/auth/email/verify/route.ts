@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     return redirect(request, 'success');
   } catch (error) {
     if (error instanceof EmailVerificationError) return redirect(request, 'error');
-    console.error('Account email verification callback failed:', error instanceof Error ? error.message : 'unknown');
+    console.error('Account email verification callback failed.');
     return redirect(request, 'error');
   }
 }

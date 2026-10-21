@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { FieldValue } from 'firebase-admin/firestore';
-import { getAdminDb } from '@/lib/firebase-admin';
+import { getAdminDb, getFirebaseAdminApp } from '@/lib/firebase-admin';
+import { getAuth } from 'firebase-admin/auth';
 import { sendBusinessVerificationStatusEmail } from '@/lib/email/actions';
 import { createAuditEvent } from '@/lib/operations/audit-event.mjs';
 import { BusinessVerificationError, type VerificationStatus } from './verification';
@@ -62,12 +63,15 @@ export async function reviewBusinessVerification(input: {
     const verification = data.verification || {};
     if (!['pending_verification', 'pending_review', 'more_information_required', 'rejected'].includes(data.verificationStatus)) throw new BusinessVerificationError('VERIFICATION_CONFLICT');
     const ownerId = typeof verification.submittedBy === 'string' ? verification.submittedBy : typeof data.ownerId === 'string' ? data.ownerId : '';
-    const accountRef = ownerId ? db.collection('accounts').doc(ownerId) : null;
-    const accountSnapshot = accountRef ? await transaction.get(accountRef) : null;
-    const account = accountSnapshot?.data() || {};
     let nextStatus: VerificationStatus = 'pending_review';
     if (input.action === 'approve') {
-      if (account.emailVerified !== true || verification.checks?.businessDomainEmail !== 'verified') throw new BusinessVerificationError('VERIFICATION_CONFLICT');
+      let accountEmailVerified = false;
+      try {
+        accountEmailVerified = ownerId ? (await getAuth(getFirebaseAdminApp()).getUser(ownerId)).emailVerified === true : false;
+      } catch {
+        throw new BusinessVerificationError('VERIFICATION_CONFLICT');
+      }
+      if (!accountEmailVerified || verification.checks?.businessDomainEmail !== 'verified') throw new BusinessVerificationError('VERIFICATION_CONFLICT');
       nextStatus = 'verified';
     } else if (input.action === 'reject') {
       nextStatus = 'rejected';

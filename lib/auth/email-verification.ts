@@ -67,8 +67,8 @@ export async function consumeEmailVerificationToken(token: string) {
   try {
     const currentUser = await getAuth(getFirebaseAdminApp()).getUser(uid);
     currentEmail = currentUser.email?.toLowerCase() || '';
-    if (!currentEmail || tokenData.emailHash !== hash(currentEmail) || currentUser.emailVerified === true) throw new EmailVerificationError('INVALID_TOKEN');
-    await getAuth(getFirebaseAdminApp()).updateUser(uid, { emailVerified: true });
+    if (!currentEmail || tokenData.emailHash !== hash(currentEmail)) throw new EmailVerificationError('INVALID_TOKEN');
+    if (currentUser.emailVerified !== true) await getAuth(getFirebaseAdminApp()).updateUser(uid, { emailVerified: true });
   } catch {
     if (currentEmail) throw new EmailVerificationError('INVALID_TOKEN');
     throw new EmailVerificationError('ACCOUNT_NOT_FOUND');

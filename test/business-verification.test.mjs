@@ -42,7 +42,8 @@ test('onboarding requires a business-domain email and does not require SMS', () 
 
 test('approval requires authoritative account email and verified business-domain email', () => {
   const service = read('lib/business/verification-admin.ts');
-  assert.match(service, /account\.emailVerified !== true/);
+  assert.match(service, /getAuth\(getFirebaseAdminApp\(\)\)\.getUser\(ownerId\)/);
+  assert.doesNotMatch(service, /account\.emailVerified !== true/);
   assert.match(service, /verification\.checks\?\.businessDomainEmail !== 'verified'/);
   assert.doesNotMatch(service, /phoneVerification\?\.status !== 'verified'/);
   assert.match(service, /createAuditEvent/);
@@ -54,7 +55,16 @@ test('account email verification is single-use and delivery recovery is observab
   assert.match(email, /expiresAt/);
   assert.match(email, /used/);
   assert.match(email, /updateUser\(uid, \{ emailVerified: true \}/);
+  assert.match(email, /if \(currentUser\.emailVerified !== true\)/);
   assert.match(request, /invalidateEmailVerificationToken/);
+});
+
+test('admin queue exposes review states and request-more-info remains available for resubmission', () => {
+  const service = read('lib/business/verification-admin.ts');
+  const queue = read('app/admin/VerificationQueue.tsx');
+  assert.match(service, /more_information_required/);
+  assert.match(queue, /request-more-info/);
+  assert.match(queue, /review\.verificationStatus/);
 });
 
 test('phone verification fails closed when no provider is configured', () => {

@@ -15,7 +15,8 @@ export async function POST(request: NextRequest) {
     const business = await getAdminDb().collection('businesses').doc(businessId).get();
     const website = typeof business.data()?.verification?.website === 'string' ? business.data()!.verification.website : '';
     const submittedEmail = typeof business.data()?.verification?.businessEmail === 'string' ? business.data()!.verification.businessEmail.toLowerCase() : '';
-    if (!submittedEmail || email.trim().toLowerCase() !== submittedEmail) return NextResponse.json({ error: 'Use the business email submitted with this business profile.' }, { status: 400 });
+    if (!submittedEmail) return NextResponse.json({ error: 'Resubmit the business details before requesting a business-domain email.' }, { status: 409 });
+    if (email.trim().toLowerCase() !== submittedEmail) return NextResponse.json({ error: 'Use the business email submitted with this business profile.' }, { status: 400 });
     const appUrl = process.env.APP_URL || 'http://localhost:3000';
     let origin: string;
     try {

@@ -116,8 +116,9 @@ export async function createInitialBusiness(input: { userId: string; email: stri
     : null;
 
   const existingBusiness = await businessRef.get();
+  if (existingBusiness.exists && existingBusiness.data()?.ownerId !== input.userId) throw new BusinessAccessError('BUSINESS_ALREADY_OWNED');
   if (existingBusiness.exists && existingBusiness.data()?.verificationStatus === 'rejected') throw new BusinessVerificationError('REGISTRATION_REJECTED');
-  if (existingBusiness.exists && ['pending_verification', 'pending_review', 'more_information_required'].includes(existingBusiness.data()?.verificationStatus)) {
+  if (existingBusiness.exists && existingBusiness.data()?.verification && ['pending_verification', 'pending_review', 'more_information_required'].includes(existingBusiness.data()?.verificationStatus)) {
     const existingVerification = existingBusiness.data()?.verification;
     if (String(existingVerification?.businessEmail || '').toLowerCase() !== verification.businessEmail.toLowerCase()) {
       await invalidateDomainEmailTokens(input.userId, businessId);
@@ -157,8 +158,13 @@ export async function createInitialBusiness(input: { userId: string; email: stri
     ]);
     const registrationDoc = registrationRef ? await transaction.get(registrationRef) : null;
 
-    if (membershipDoc.exists && businessDoc.exists) {
-      if (businessDoc.data()?.verificationStatus === 'rejected') throw new BusinessVerificationError('REGISTRATION_REJECTED');
+    const existingBusinessData = businessDoc.data();
+    const existingVerification = existingBusinessData?.verification;
+    const currentStatus = existingBusinessData?.verificationStatus;
+    if (businessDoc.exists && existingBusinessData?.ownerId !== input.userId) throw new BusinessAccessError('BUSINESS_ALREADY_OWNED');
+    if (currentStatus === 'rejected') throw new BusinessVerificationError('REGISTRATION_REJECTED');
+    const isPendingOrTerminal = ['pending_verification', 'pending_review', 'verified', 'more_information_required', 'rejected', 'suspended'].includes(currentStatus);
+    if (membershipDoc.exists && businessDoc.exists && existingVerification && isPendingOrTerminal) {
       return;
     }
     const registration = registrationDoc?.data();
@@ -166,16 +172,22 @@ export async function createInitialBusiness(input: { userId: string; email: stri
       if (registration?.status === 'rejected') throw new BusinessVerificationError('REGISTRATION_REJECTED');
       throw new BusinessVerificationError('REGISTRATION_ALREADY_USED');
     }
-    if (businessDoc.exists && businessDoc.data()?.ownerId !== input.userId) throw new BusinessAccessError('BUSINESS_ALREADY_OWNED');
+    const isLegacySubmission = businessDoc.exists && currentStatus == null;
+    if (isLegacySubmission && (!membershipDoc.exists || membershipDoc.data()?.userId !== input.userId || membershipDoc.data()?.role !== 'owner' || membershipDoc.data()?.status !== 'active')) {
+      throw new BusinessAccessError('BUSINESS_FORBIDDEN');
+    }
 
     const now = FieldValue.serverTimestamp();
-    transaction.set(businessRef, {
-      name: verification.tradeName,
-      slug: slugify(verification.tradeName),
-      ownerId: input.userId,
-      status: 'active',
+    const businessData: FirebaseFirestore.DocumentData = {
+      ...(businessDoc.exists ? {} : {
+        name: verification.tradeName,
+        slug: slugify(verification.tradeName),
+        ownerId: input.userId,
+        status: 'active',
+        timezone: verification.countryCode === 'IN' ? 'Asia/Kolkata' : 'UTC',
+        createdAt: now,
+      }),
       verificationStatus: 'pending_verification',
-      timezone: verification.countryCode === 'IN' ? 'Asia/Kolkata' : 'UTC',
       contactEmail: verification.businessEmail,
       verification: {
         ...verification,
@@ -193,10 +205,10 @@ export async function createInitialBusiness(input: { userId: string; email: stri
         reviewedBy: null,
         reviewedAt: null,
       },
-      createdAt: businessDoc.exists ? businessDoc.data()?.createdAt : now,
       updatedAt: now,
-    }, { merge: true });
-    transaction.set(membershipRef, {
+    };
+    transaction.set(businessRef, businessData, { merge: true });
+    if (!businessDoc.exists) transaction.set(membershipRef, {
       businessId,
       userId: input.userId,
       role: 'owner',
@@ -214,8 +226,10 @@ export async function createInitialBusiness(input: { userId: string; email: stri
       updatedAt: now,
     }, { merge: true });
 
-    for (const project of legacyProjects.docs) {
-      if (!project.data().businessId) transaction.update(project.ref, { businessId, updatedAt: now });
+    if (!businessDoc.exists) {
+      for (const project of legacyProjects.docs) {
+        if (!project.data().businessId) transaction.update(project.ref, { businessId, updatedAt: now });
+      }
     }
   });
 

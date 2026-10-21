@@ -1,11 +1,11 @@
 import { getAdminDb } from '@/lib/firebase-admin';
-import { getVerifiedSession, AuthBoundaryError } from '@/lib/auth/server';
+import { requireEmailVerifiedSession, AuthBoundaryError } from '@/lib/auth/server';
 
 export type BusinessRole = 'owner' | 'admin' | 'member' | 'operator';
 export type BusinessActor = { uid: string; businessId: string; role: BusinessRole; business: FirebaseFirestore.DocumentData };
 
 export async function requireBusinessActor(allowedRoles: BusinessRole[] = ['owner', 'admin', 'member', 'operator'], requestedBusinessId?: string): Promise<BusinessActor> {
-  const session = await getVerifiedSession();
+  const session = await requireEmailVerifiedSession();
   const db = getAdminDb();
   const memberships = requestedBusinessId
     ? [await db.collection('memberships').doc(`${requestedBusinessId}__${session.uid}`).get()]
@@ -15,7 +15,7 @@ export async function requireBusinessActor(allowedRoles: BusinessRole[] = ['owne
   const membershipData = membership.data()!;
   const businessId = String(membershipData.businessId || '');
   const business = await db.collection('businesses').doc(businessId).get();
-  if (!business.exists || business.data()?.status === 'suspended') throw new AuthBoundaryError('FORBIDDEN');
+  if (!business.exists || business.data()?.status === 'suspended' || business.data()?.verificationStatus !== 'verified') throw new AuthBoundaryError('FORBIDDEN');
   return { uid: session.uid, businessId, role: membershipData.role as BusinessRole, business: business.data() || {} };
 }
 

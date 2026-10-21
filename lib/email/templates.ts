@@ -199,6 +199,26 @@ export function authEmailTemplate(title: string, message: string, code?: string,
   `);
 }
 
+export function accountEmailVerificationTemplate(name: string, verifyUrl: string) {
+  return baseLayout(`
+    <h1>Verify your Nanoware AI email</h1>
+    <p>Hello ${escapeHtml(name)},</p>
+    <p>Confirm this email address to continue with business verification. The link expires in 30 minutes and can be used only once.</p>
+    <div class="button-container"><a href="${escapeHtml(verifyUrl)}" class="button">Verify email address</a></div>
+    <p class="text-sm">If you did not create this account, you can ignore this message.</p>
+  `);
+}
+
+export function businessDomainEmailVerificationTemplate(name: string, verifyUrl: string) {
+  return baseLayout(`
+    <h1>Verify your business email domain</h1>
+    <p>Hello ${escapeHtml(name)},</p>
+    <p>Use this one-time link to confirm that you can access an email address on the domain claimed for your Nanoware business. This is an additional trust signal, not legal proof of the business.</p>
+    <div class="button-container"><a href="${escapeHtml(verifyUrl)}" class="button">Verify business email</a></div>
+    <p class="text-sm">The link expires in 30 minutes.</p>
+  `);
+}
+
 export function revenueReportEmailTemplate(data: { name: string, loss: number, recoverable: number, url: string }) {
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
   
@@ -391,5 +411,23 @@ export function adminNotificationTemplate(title: string, eventType: string, summ
       <a href="${url}/admin" class="button">Go to Admin Panel</a>
     </div>
     ` : ''}
+  `);
+}
+
+export function businessVerificationStatusTemplate(data: { name: string; status: 'pending_verification' | 'pending_review' | 'verified' | 'more_information_required' | 'rejected' | 'suspended'; reason?: string; url: string }) {
+  const copy = {
+    pending_verification: ['Business verification started', 'Complete the requested account and phone verification steps so we can review your business.'],
+    pending_review: ['Business verification received', 'Your business details are in the review queue. We will notify you when a decision is available.'],
+    verified: ['Business verified', 'Your business has been verified. You can now continue setting up your Nanoware workspace.'],
+    more_information_required: ['More information is required', 'Please return to Nanoware AI and complete the requested verification step before we can decide your application.'],
+    rejected: ['Business verification needs attention', 'We could not verify this business registration. Review the reason below and contact support if you need help.'],
+    suspended: ['Business access suspended', 'Access to this business workspace has been suspended. Contact support for next steps.'],
+  }[data.status];
+  return baseLayout(`
+    <h1>${escapeHtml(copy[0])}</h1>
+    <p>Hello ${escapeHtml(data.name)},</p>
+    <p>${escapeHtml(copy[1])}</p>
+    ${data.reason ? `<div class="highlight-box"><div class="highlight-label">Review note</div><p style="margin-bottom: 0;">${escapeHtml(data.reason)}</p></div>` : ''}
+    <div class="button-container"><a href="${escapeHtml(data.url)}/dashboard" class="button">Open Nanoware AI</a></div>
   `);
 }

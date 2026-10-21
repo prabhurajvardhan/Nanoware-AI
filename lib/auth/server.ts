@@ -3,12 +3,13 @@ import { cookies } from 'next/headers';
 import { getAuth } from 'firebase-admin/auth';
 import { getAdminDb, getFirebaseAdminApp } from '@/lib/firebase-admin';
 import { MFA_COOKIE, SESSION_COOKIE } from './constants';
+import { isEmailVerified } from './email-verification';
 
 // Re-exported so existing importers keep working; the constants themselves live in a dependency-free module.
 export { MFA_COOKIE, MFA_MAX_AGE_SECONDS, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from './constants';
 
 export class AuthBoundaryError extends Error {
-  constructor(public readonly code: 'UNAUTHENTICATED' | 'FORBIDDEN' | 'MFA_REQUIRED') {
+  constructor(public readonly code: 'UNAUTHENTICATED' | 'FORBIDDEN' | 'MFA_REQUIRED' | 'EMAIL_VERIFICATION_REQUIRED') {
     super(code);
     this.name = 'AuthBoundaryError';
   }
@@ -24,6 +25,14 @@ export async function getVerifiedSession() {
   } catch {
     throw new AuthBoundaryError('UNAUTHENTICATED');
   }
+}
+
+export async function requireEmailVerifiedSession() {
+  const session = await getVerifiedSession();
+  if (!(await isEmailVerified(session.uid, session.email_verified === true))) {
+    throw new AuthBoundaryError('EMAIL_VERIFICATION_REQUIRED');
+  }
+  return session;
 }
 
 export async function requireAdminActor(options: { requireMfa?: boolean } = {}) {
@@ -56,6 +65,7 @@ export function hash(value: string) {
 export function authErrorResponse(error: unknown) {
   if (error instanceof AuthBoundaryError) {
     if (error.code === 'MFA_REQUIRED') return { code: error.code, message: 'Additional verification required.' };
+    if (error.code === 'EMAIL_VERIFICATION_REQUIRED') return { code: error.code, message: 'Verify your account email first.' };
     return { code: error.code, message: error.code === 'FORBIDDEN' ? 'Forbidden.' : 'Authentication required.' };
   }
   return { code: 'INTERNAL_ERROR', message: 'Unable to complete the request.' };

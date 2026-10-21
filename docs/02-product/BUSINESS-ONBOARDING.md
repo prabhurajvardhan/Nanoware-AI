@@ -1,7 +1,7 @@
 # Business Onboarding
 
 - **Document ID:** PROD-004
-- **Status:** IMPLEMENTED FOUNDATION
+- **Status:** IMPLEMENTED FOUNDATION + PHASE 1 VERIFICATION GATE
 - **Last updated:** 2026-10-13
 
 ## Proposed states
@@ -18,3 +18,11 @@ Acceptance: repeated submission creates one business, one owner membership, and 
 - Existing legacy projects for the authenticated user are backfilled with `businessId` in the same transaction so the dashboard does not lose access during migration.
 - `/api/business/access` returns only businesses resolved from active membership records. The dashboard revalidates a selected business before reading business-scoped projects.
 - Invite-based association to a second business is intentionally not created by this batch; when an approved invite workflow exists, it must write the same canonical membership shape. Existing memberships already support multiple businesses and the dashboard renders a selection screen.
+
+## Phase 1 verification evidence
+
+- `/api/business/onboard` accepts legal/trade identity, business type, country, website, business email, phone, registration number, address, and expected use from the verified session only.
+- New businesses receive `verificationStatus: pending_review`; free-mail domains, registration format, and website ownership checks are recorded under the server-only `verification` object.
+- Website ownership can be proven with the generated DNS TXT record or homepage meta tag. The existing SSRF-safe public HTML fetcher is reused for meta-tag checks.
+- `/api/admin/business-verifications` and its decision endpoint require an admin session plus MFA. Approve, reject, and request-more-info decisions write an `auditEvents` record and trigger a status email.
+- Selected operations-style business access is denied until the business is verified. Existing pre-gate active businesses are treated as verified for backward compatibility until migration.

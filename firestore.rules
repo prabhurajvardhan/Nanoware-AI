@@ -19,9 +19,12 @@ service cloud.firestore {
       return hasBusinessMembership(businessId) &&
         get(/databases/$(database)/documents/memberships/$(businessId + '__' + request.auth.uid)).data.role in allowedRoles;
     }
+    function isVerifiedBusiness(businessId) {
+      return get(/databases/$(database)/documents/businesses/$(businessId)).data.verificationStatus == 'verified';
+    }
     function canReadProject(projectId) {
       return isAdmin() ||
-        (get(/databases/$(database)/documents/projects/$(projectId)).data.keys().hasAny(['businessId']) && hasBusinessMembership(get(/databases/$(database)/documents/projects/$(projectId)).data.businessId)) ||
+        (get(/databases/$(database)/documents/projects/$(projectId)).data.keys().hasAny(['businessId']) && isVerifiedBusiness(get(/databases/$(database)/documents/projects/$(projectId)).data.businessId) && hasBusinessMembership(get(/databases/$(database)/documents/projects/$(projectId)).data.businessId)) ||
         (!get(/databases/$(database)/documents/projects/$(projectId)).data.keys().hasAny(['businessId']) && get(/databases/$(database)/documents/projects/$(projectId)).data.userId == request.auth.uid);
     }
 
@@ -53,23 +56,23 @@ service cloud.firestore {
     }
 
     match /projects/{projectId} {
-      allow create: if isSignedIn() && isValidProject(incoming()) && hasBusinessRole(incoming().businessId, ['owner', 'admin']);
+      allow create: if isSignedIn() && isValidProject(incoming()) && isVerifiedBusiness(incoming().businessId) && hasBusinessRole(incoming().businessId, ['owner', 'admin']);
       allow get: if isValidId(projectId) && canReadProject(projectId);
       allow list: if isAdmin() ||
-        (resource.data.keys().hasAny(['businessId']) && hasBusinessMembership(resource.data.businessId)) ||
+        (resource.data.keys().hasAny(['businessId']) && isVerifiedBusiness(resource.data.businessId) && hasBusinessMembership(resource.data.businessId)) ||
         (!resource.data.keys().hasAny(['businessId']) && isSignedIn() && resource.data.userId == request.auth.uid);
-      allow update, delete: if isAdmin() || (existing().keys().hasAny(['businessId']) && hasBusinessRole(existing().businessId, ['owner', 'admin']));
+      allow update, delete: if isAdmin() || (existing().keys().hasAny(['businessId']) && isVerifiedBusiness(existing().businessId) && hasBusinessRole(existing().businessId, ['owner', 'admin']));
 
       match /steps/{stepId} {
         allow create, update, delete: if isAdmin() ||
-          (get(/databases/$(database)/documents/projects/$(projectId)).data.keys().hasAny(['businessId']) && hasBusinessRole(get(/databases/$(database)/documents/projects/$(projectId)).data.businessId, ['owner', 'admin']));
+          (get(/databases/$(database)/documents/projects/$(projectId)).data.keys().hasAny(['businessId']) && isVerifiedBusiness(get(/databases/$(database)/documents/projects/$(projectId)).data.businessId) && hasBusinessRole(get(/databases/$(database)/documents/projects/$(projectId)).data.businessId, ['owner', 'admin']));
         allow read: if isValidId(stepId) && isValidId(projectId) && canReadProject(projectId);
       }
 
       match /activities/{activityId} {
         // Feedback is written through the authenticated server route, not from the browser.
         allow create, update, delete: if isAdmin() ||
-          (get(/databases/$(database)/documents/projects/$(projectId)).data.keys().hasAny(['businessId']) && hasBusinessRole(get(/databases/$(database)/documents/projects/$(projectId)).data.businessId, ['owner', 'admin']));
+          (get(/databases/$(database)/documents/projects/$(projectId)).data.keys().hasAny(['businessId']) && isVerifiedBusiness(get(/databases/$(database)/documents/projects/$(projectId)).data.businessId) && hasBusinessRole(get(/databases/$(database)/documents/projects/$(projectId)).data.businessId, ['owner', 'admin']));
         allow read: if isValidId(activityId) && isValidId(projectId) && canReadProject(projectId);
       }
     }

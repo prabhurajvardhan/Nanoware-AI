@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AuthBoundaryError, getVerifiedSession } from '@/lib/auth/server';
+import { AuthBoundaryError, requireEmailVerifiedSession } from '@/lib/auth/server';
 import { BusinessAccessError, createInitialBusiness } from '@/lib/business/access';
+import { BusinessVerificationError } from '@/lib/business/verification';
+import { getAdminDb } from '@/lib/firebase-admin';
+import { sendBusinessVerificationStatusEmail } from '@/lib/email/actions';
 import { enforceRateLimit, rateLimitResponse, trustedClientKey } from '@/lib/security/rate-limit';
 
-const MAX_BODY_BYTES = 8_000;
+const MAX_BODY_BYTES = 16_000;
 
 async function readBody(request: NextRequest) {
   const declaredLength = Number(request.headers.get('content-length') || 0);
@@ -29,31 +32,53 @@ async function readBody(request: NextRequest) {
   return new TextDecoder().decode(bytes);
 }
 
+function errorResponse(error: unknown) {
+  if (error instanceof AuthBoundaryError) {
+    if (error.code === 'EMAIL_VERIFICATION_REQUIRED') return NextResponse.json({ error: 'Verify your account email before submitting business details.', emailVerificationRequired: true }, { status: 403 });
+    return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+  }
+  if (error instanceof BusinessVerificationError) {
+    const messages: Record<string, string> = {
+      INVALID_BUSINESS_DETAILS: 'Enter valid business details.',
+      INVALID_REGISTRATION_NUMBER: 'Enter a valid business registration number.',
+      REGISTRATION_ALREADY_USED: 'That registration number is already associated with another business.',
+      REGISTRATION_REJECTED: 'This registration number cannot be submitted again.',
+    };
+    return NextResponse.json({ error: messages[error.code] || 'Business verification could not be submitted.' }, { status: 400 });
+  }
+  if (error instanceof BusinessAccessError) return NextResponse.json({ error: 'Unable to create the business profile.' }, { status: 400 });
+  if (error instanceof Error && error.message === 'BODY_TOO_LARGE') return NextResponse.json({ error: 'Request body too large.' }, { status: 413 });
+  if (error instanceof SyntaxError) return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
+  console.error('Business verification submission failed:', error instanceof Error ? error.message : 'unknown');
+  return NextResponse.json({ error: 'Unable to submit business verification.' }, { status: 500 });
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const session = await getVerifiedSession();
-    await enforceRateLimit(`business-onboard:${trustedClientKey(request, session.uid)}`, 5, 15 * 60 * 1000);
+    const session = await requireEmailVerifiedSession();
+    await enforceRateLimit(`business-verification:${trustedClientKey(request, session.uid)}`, 3, 15 * 60 * 1000);
     const body: unknown = JSON.parse(await readBody(request));
-    const name = body && typeof body === 'object' && 'name' in body && typeof body.name === 'string' ? body.name : '';
-    const timezone = body && typeof body === 'object' && 'timezone' in body && typeof body.timezone === 'string' ? body.timezone : '';
-    if (name.trim().length < 2 || name.trim().length > 100 || timezone.length > 64) {
-      return NextResponse.json({ error: 'Enter a valid business name and timezone.' }, { status: 400 });
-    }
-    const business = await createInitialBusiness({
-      userId: session.uid,
-      email: session.email || '',
-      name,
-      timezone,
-    });
-    return NextResponse.json({ business }, { status: 201 });
+    if (!body || typeof body !== 'object') return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
+    const business = await createInitialBusiness({ userId: session.uid, email: session.email || '', ...(body as Record<string, unknown>) });
+    const snapshot = await getAdminDb().collection('businesses').doc(business.businessId).get();
+    const verification = snapshot.data()?.verification;
+    const email = typeof verification?.businessEmail === 'string' ? verification.businessEmail : session.email || '';
+    if (email) await sendBusinessVerificationStatusEmail(email, business.businessName, 'pending_verification');
+    return NextResponse.json({
+      business,
+      verification: {
+        status: business.verificationStatus,
+        websiteProof: verification?.websiteProof ? {
+          token: verification.websiteProof.token,
+          dnsRecord: verification.websiteProof.dnsRecord,
+          metaName: verification.websiteProof.metaName,
+          status: verification.websiteProof.status,
+        } : null,
+      },
+    }, { status: 201 });
   } catch (error) {
     const limited = rateLimitResponse(error);
     if (limited) return limited;
-    if (error instanceof Error && error.message === 'BODY_TOO_LARGE') return NextResponse.json({ error: 'Request body too large.' }, { status: 413 });
-    if (error instanceof SyntaxError) return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
-    if (error instanceof AuthBoundaryError) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
-    if (error instanceof BusinessAccessError) return NextResponse.json({ error: 'Unable to create the business workspace.' }, { status: 400 });
-    console.error('Business onboarding failed:', error instanceof Error ? error.message : 'unknown error');
-    return NextResponse.json({ error: 'Unable to create the business workspace.' }, { status: 500 });
+    return errorResponse(error);
   }
 }

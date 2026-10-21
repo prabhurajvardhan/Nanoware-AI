@@ -2,31 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import ts from 'typescript';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { buildInitialBusinessWritePayloads, stripUndefinedFirestoreValues } from '../lib/business/firestore-values.ts';
 
 const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const accessSource = read('lib/business/access.ts');
 const verificationSource = read('lib/business/verification.ts');
-
-function getAccessSanitizer() {
-  const match = accessSource.match(/export function stripUndefinedFirestoreValues[\s\S]*?\n}/);
-  assert.ok(match, 'access.ts must define the Firestore undefined-value sanitizer');
-  const javascript = ts.transpile(match[0].replace(/^export\s+/, ''), {
-    target: ts.ScriptTarget.ES2022,
-    module: ts.ModuleKind.None,
-  });
-  return new Function(`${javascript}; return stripUndefinedFirestoreValues;`)();
-}
-
-function containsUndefined(value) {
-  if (value === undefined) return true;
-  if (Array.isArray(value)) return value.some(containsUndefined);
-  if (value && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
-    return Object.values(value).some(containsUndefined);
-  }
-  return false;
-}
-
-const stripUndefined = getAccessSanitizer();
 
 function getValidator() {
   const match = verificationSource.match(/export function validateVerificationInput[\s\S]*?\n}/);
@@ -59,65 +40,67 @@ function getValidator() {
     domainMatchesWebsite,
   );
 }
+
+function assertNoUndefinedOrArraySentinels(value, path = 'payload', insideArray = false) {
+  assert.notEqual(value, undefined, `undefined found at ${path}`);
+  if (value instanceof FieldValue) {
+    assert.equal(insideArray, false, `FieldValue sentinel found inside array at ${path}`);
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const [index, item] of value.entries()) assertNoUndefinedOrArraySentinels(item, `${path}[${index}]`, true);
+    return;
+  }
+  if (value && typeof value === 'object' && [Object.prototype, null].includes(Object.getPrototypeOf(value))) {
+    for (const [key, item] of Object.entries(value)) assertNoUndefinedOrArraySentinels(item, `${path}.${key}`, insideArray);
+  }
+}
+
 const validateVerificationInput = getValidator();
 
-test('minimal onboarding input has only defined validation fields and Firestore payloads', () => {
+test('minimal onboarding payload builds Firestore-safe new and legacy business write payloads', () => {
   const verification = validateVerificationInput({
     businessName: 'Northstar Studio',
     website: 'https://northstar.example',
     businessEmail: 'owner@northstar.example',
     countryCode: 'US',
   }, 'account@example.net');
-
   assert.equal(Object.hasOwn(verification, 'registrationType'), false);
-  assert.equal(containsUndefined(verification), false);
 
-  for (const isLegacyBusiness of [false, true]) {
-    const now = { timestampSentinel: true };
-    const rawBusinessWrite = {
-      ...(isLegacyBusiness ? {} : {
-        name: verification.tradeName,
-        slug: 'northstar-studio',
-        ownerId: 'user_1',
-        status: 'active',
-        timezone: 'UTC',
-        createdAt: now,
-      }),
-      verificationStatus: 'pending_verification',
-      contactEmail: verification.businessEmail,
-      verification: {
-        ...verification,
-        registrationType: undefined,
-        submittedBy: 'user_1',
-        websiteProof: { token: 'proof', status: 'failed', method: null, checkedAt: now },
-        checks: {
-          accountEmail: 'verified',
-          phone: 'pending',
-          websiteOwnership: 'failed',
-          businessDomainEmail: 'pending',
-          googleBusinessProfile: 'not_provided',
-        },
-        evidence: [{ evidenceType: 'website_ownership', status: 'failed', source: 'unavailable', checkedAt: now }],
-        reviewReason: null,
-        reviewedBy: null,
-        reviewedAt: null,
-      },
-      updatedAt: now,
-    };
-    const businessWrite = stripUndefined(rawBusinessWrite);
-    assert.equal(containsUndefined(businessWrite), false, `${isLegacyBusiness ? 'legacy' : 'new'} business payload contains undefined`);
-    assert.equal(Object.hasOwn(businessWrite.verification, 'registrationType'), false);
+  for (const businessExists of [false, true]) {
+    const writes = buildInitialBusinessWritePayloads({
+      businessExists,
+      businessId: 'business_user_1',
+      userId: 'user_1',
+      tradeName: verification.tradeName,
+      slug: 'northstar-studio',
+      countryCode: verification.countryCode,
+      businessEmail: verification.businessEmail,
+      registrationNumber: verification.registrationNumber,
+      registrationType: verification.registrationType,
+      verification,
+      proof: { token: 'proof-token', dnsRecord: '_nanoware-verification', metaName: 'nanoware-verification' },
+      websiteCheck: { status: 'failed', method: null },
+      now: FieldValue.serverTimestamp(),
+    });
 
-    if (!isLegacyBusiness) {
-      const membershipWrite = stripUndefined({ businessId: 'business_user_1', userId: 'user_1', role: 'owner', status: 'active', createdAt: now, updatedAt: now });
-      assert.equal(containsUndefined(membershipWrite), false, 'new-business membership payload contains undefined');
-    }
+    assertNoUndefinedOrArraySentinels(writes);
+    assert.equal(Object.hasOwn(writes.business.verification, 'registrationType'), false);
+    assert.ok(writes.business.verification.evidence[0].checkedAt instanceof Timestamp);
+    assert.equal(writes.business.verification.evidence[0].checkedAt instanceof FieldValue, false);
+    assert.equal(writes.membership === null, businessExists);
+    assert.equal(writes.registration, null);
   }
 });
 
-test('all createInitialBusiness transaction writes sanitize the data passed to Firestore', () => {
-  assert.match(accessSource, /transaction\.set\(businessRef,\s*stripUndefinedFirestoreValues\(businessData\)/);
-  assert.match(accessSource, /transaction\.set\(membershipRef,\s*stripUndefinedFirestoreValues\(\{/);
-  assert.match(accessSource, /transaction\.set\(registrationRef,\s*stripUndefinedFirestoreValues\(\{/);
-  assert.match(accessSource, /transaction\.update\(project\.ref,\s*stripUndefinedFirestoreValues\(\{/);
+test('the sanitizer rejects a FieldValue transform nested inside an array', () => {
+  assert.throws(() => stripUndefinedFirestoreValues({ evidence: [{ checkedAt: FieldValue.serverTimestamp() }] }), /cannot be used inside arrays/i);
+  assert.deepEqual(stripUndefinedFirestoreValues({ evidence: [undefined] }), { evidence: [] });
+});
+
+test('createInitialBusiness writes the tested builder payloads directly to Firestore', () => {
+  assert.match(accessSource, /buildInitialBusinessWritePayloads\(/);
+  assert.match(accessSource, /transaction\.set\(businessRef, writePayloads\.business/);
+  assert.match(accessSource, /transaction\.set\(membershipRef, writePayloads\.membership/);
+  assert.match(accessSource, /transaction\.set\(registrationRef, writePayloads\.registration/);
 });

@@ -10,6 +10,8 @@ import {
   validateVerificationInput,
 } from './verification';
 import { invalidateDomainEmailTokens } from './domain-email-verification';
+import { buildInitialBusinessWritePayloads, stripUndefinedFirestoreValues } from './firestore-values';
+export { stripUndefinedFirestoreValues } from './firestore-values';
 
 export const BUSINESS_ROLES = ['owner', 'admin', 'member'] as const;
 export type BusinessRole = (typeof BUSINESS_ROLES)[number];
@@ -104,14 +106,6 @@ function slugify(name: string) {
 
 function sixtyFour() { return 64; }
 
-export function stripUndefinedFirestoreValues<T>(value: T): T {
-  if (Array.isArray(value)) return value.filter((item) => item !== undefined).map(stripUndefinedFirestoreValues) as T;
-  if (value === null || typeof value !== 'object') return value;
-  const prototype = Object.getPrototypeOf(value);
-  if (prototype !== Object.prototype && prototype !== null) return value;
-  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined).map(([key, item]) => [key, stripUndefinedFirestoreValues(item)])) as T;
-}
-
 export async function createInitialBusiness(input: { userId: string; email: string } & Partial<VerificationInput>) {
   const verification = validateVerificationInput(input, input.email);
   const db = getAdminDb();
@@ -186,53 +180,26 @@ export async function createInitialBusiness(input: { userId: string; email: stri
     }
 
     const now = FieldValue.serverTimestamp();
-    const businessData: FirebaseFirestore.DocumentData = {
-      ...(businessDoc.exists ? {} : {
-        name: verification.tradeName,
-        slug: slugify(verification.tradeName),
-        ownerId: input.userId,
-        status: 'active',
-        timezone: verification.countryCode === 'IN' ? 'Asia/Kolkata' : 'UTC',
-        createdAt: now,
-      }),
-      verificationStatus: 'pending_verification',
-      contactEmail: verification.businessEmail,
-      verification: {
-        ...verification,
-        submittedBy: input.userId,
-        websiteProof: { ...proof, status: websiteCheck.status, method: websiteCheck.method, checkedAt: now },
-        checks: {
-          accountEmail: 'verified',
-          phone: 'pending',
-          websiteOwnership: websiteCheck.status,
-          businessDomainEmail: 'pending',
-          googleBusinessProfile: 'not_provided',
-        },
-        evidence: [{ evidenceType: 'website_ownership', status: websiteCheck.status, source: websiteCheck.method || 'unavailable', checkedAt: now }],
-        reviewReason: null,
-        reviewedBy: null,
-        reviewedAt: null,
-      },
-      updatedAt: now,
-    };
-    transaction.set(businessRef, stripUndefinedFirestoreValues(businessData), { merge: true });
-    if (!businessDoc.exists) transaction.set(membershipRef, stripUndefinedFirestoreValues({
+    const writePayloads = buildInitialBusinessWritePayloads({
+      businessExists: businessDoc.exists,
       businessId,
       userId: input.userId,
-      role: 'owner',
-      status: 'active',
-      createdAt: now,
-      updatedAt: now,
-    }), { merge: true });
-    if (registrationRef) transaction.set(registrationRef, stripUndefinedFirestoreValues({
-      businessId,
-      userId: input.userId,
-      country: verification.countryCode,
+      tradeName: verification.tradeName,
+      slug: slugify(verification.tradeName),
+      countryCode: verification.countryCode,
+      businessEmail: verification.businessEmail,
+      registrationNumber: verification.registrationNumber,
       registrationType: verification.registrationType,
-      status: 'pending_review',
-      createdAt: registrationDoc?.exists ? registration?.createdAt : now,
-      updatedAt: now,
-    }), { merge: true });
+      verification,
+      proof,
+      websiteCheck,
+      now,
+      registrationExists: registrationDoc?.exists,
+      registrationCreatedAt: registration?.createdAt,
+    });
+    transaction.set(businessRef, writePayloads.business, { merge: true });
+    if (writePayloads.membership) transaction.set(membershipRef, writePayloads.membership, { merge: true });
+    if (registrationRef && writePayloads.registration) transaction.set(registrationRef, writePayloads.registration, { merge: true });
 
     if (!businessDoc.exists) {
       for (const project of legacyProjects.docs) {

@@ -91,10 +91,23 @@ export async function consumeEmailVerificationToken(token: string) {
   return { uid };
 }
 
-export async function invalidateEmailVerificationToken(token: string, uid: string) {
+export async function invalidateEmailVerificationToken(token: string, uid: string): Promise<boolean> {
   const db = getAdminDb();
-  await db.collection('email_verification_tokens').doc(hash(token)).delete().catch(() => undefined);
+  const tokenRef = db.collection('email_verification_tokens').doc(hash(token));
+  let invalidated = false;
+  try {
+    await tokenRef.delete();
+    invalidated = true;
+  } catch {
+    try {
+      await tokenRef.update({ used: true, expiresAt: Date.now() });
+      invalidated = true;
+    } catch {
+      invalidated = false;
+    }
+  }
   await db.collection('email_verification_rate').doc(uid).delete().catch(() => undefined);
+  return invalidated;
 }
 
 export async function isEmailVerified(uid: string) {

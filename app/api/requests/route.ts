@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof Error && error.message === 'IDEMPOTENCY_CONFLICT') {
       return NextResponse.json({ error: 'Idempotency key was already used for different request data.' }, { status: 409 });
     }
-    console.error('Public request failed:', error instanceof Error ? error.message : 'unknown error');
+    console.error('Public request failed.');
     return NextResponse.json({ error: 'Unable to submit the request.' }, { status: 400 });
   } finally {
     release?.();

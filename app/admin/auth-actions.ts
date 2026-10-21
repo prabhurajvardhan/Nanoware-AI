@@ -58,13 +58,17 @@ export async function requestAdminOtpAction(email: string) {
 
     const emailResult = await sendAdminOtpEmail(requestedEmail, otp);
     if (!emailResult.success) {
-      await challengeRef.delete().catch(() => undefined);
+      try {
+        await challengeRef.delete();
+      } catch {
+        await challengeRef.update({ consumed: true, expiresAt: Date.now() }).catch(() => undefined);
+      }
       throw new Error('EMAIL_DELIVERY_FAILED');
     }
 
     return { success: true, challengeId };
-  } catch (error) {
-    console.error('Admin OTP request failed:', error instanceof Error ? error.message : 'unknown error');
+  } catch {
+    console.error('Admin OTP request failed.');
     return { success: false, error: 'Unable to start verification. Please try again later.' };
   }
 }
@@ -120,8 +124,8 @@ export async function verifyAdminOtpAction(challengeId: string, code: string) {
       maxAge: MFA_MAX_AGE_SECONDS,
     });
     return { success: true };
-  } catch (error) {
-    console.error('Admin OTP verification failed:', error instanceof Error ? error.message : 'unknown error');
+  } catch {
+    console.error('Admin OTP verification failed.');
     return { success: false, error: 'Unable to verify the code. Please try again later.' };
   }
 }

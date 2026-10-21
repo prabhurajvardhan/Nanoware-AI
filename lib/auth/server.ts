@@ -29,7 +29,7 @@ export async function getVerifiedSession() {
 
 export async function requireEmailVerifiedSession() {
   const session = await getVerifiedSession();
-  if (!(await isEmailVerified(session.uid, session.email_verified === true))) {
+  if (!(await isEmailVerified(session.uid))) {
     throw new AuthBoundaryError('EMAIL_VERIFICATION_REQUIRED');
   }
   return session;

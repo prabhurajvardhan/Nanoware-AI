@@ -22,7 +22,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ bu
     if (error instanceof BusinessVerificationError) {
       const status = error.code === 'VERIFICATION_NOT_FOUND' ? 404 : error.code === 'VERIFICATION_CONFLICT' ? 409 : 400;
       const messages: Record<string, string> = {
-        VERIFICATION_CONFLICT: 'This review cannot be changed, or account email and mobile phone verification are incomplete.',
+        VERIFICATION_CONFLICT: 'This review cannot be changed, or account email and business-domain email verification are incomplete.',
         INVALID_VERIFICATION_ACTION: 'Provide a valid action and review reason.',
         VERIFICATION_NOT_FOUND: 'Business verification not found.',
       };

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AuthBoundaryError, requireEmailVerifiedSession } from '@/lib/auth/server';
-import { BusinessAccessError, createInitialBusiness } from '@/lib/business/access';
+import { BusinessAccessError, createInitialBusiness, getBusinessOnboardingProgress, requireBusinessMembership } from '@/lib/business/access';
 import { BusinessVerificationError } from '@/lib/business/verification';
 import { getAdminDb } from '@/lib/firebase-admin';
 import { sendBusinessVerificationStatusEmail } from '@/lib/email/actions';
@@ -61,7 +61,24 @@ export async function POST(request: NextRequest) {
     await enforceRateLimit(`business-verification:${trustedClientKey(request, session.uid)}`, 3, 15 * 60 * 1000);
     const body: unknown = JSON.parse(await readBody(request));
     if (!body || typeof body !== 'object') return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
-    const business = await createInitialBusiness({ userId: session.uid, email: session.email || '', ...(body as Record<string, unknown>) });
+    let profile = body as Record<string, unknown>;
+    if (Object.keys(profile).length === 1 && typeof profile.businessEmail === 'string') {
+      const businessId = `business_${session.uid}`;
+      await requireBusinessMembership(session.uid, businessId, ['owner']);
+      const existing = await getAdminDb().collection('businesses').doc(businessId).get();
+      const data = existing.data() || {};
+      const verification = data.verification && typeof data.verification === 'object' ? data.verification : {};
+      if (!existing.exists || data.ownerId !== session.uid || typeof verification.website !== 'string' || typeof verification.countryCode !== 'string') {
+        throw new BusinessAccessError('BUSINESS_FORBIDDEN');
+      }
+      profile = {
+        businessName: verification.tradeName || verification.businessName || data.name,
+        website: verification.website,
+        countryCode: verification.countryCode,
+        businessEmail: profile.businessEmail,
+      };
+    }
+    const business = await createInitialBusiness({ userId: session.uid, email: session.email || '', ...profile });
     const snapshot = await getAdminDb().collection('businesses').doc(business.businessId).get();
     const verification = snapshot.data()?.verification;
     const email = typeof verification?.businessEmail === 'string' ? verification.businessEmail : session.email || '';
@@ -81,6 +98,16 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const limited = rateLimitResponse(error);
     if (limited) return limited;
+    return errorResponse(error);
+  }
+}
+
+export async function GET() {
+  try {
+    const session = await requireEmailVerifiedSession();
+    const progress = await getBusinessOnboardingProgress(session.uid);
+    return NextResponse.json({ progress }, { headers: { 'Cache-Control': 'private, no-store' } });
+  } catch (error) {
     return errorResponse(error);
   }
 }

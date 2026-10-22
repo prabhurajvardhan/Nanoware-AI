@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test:security": "node --experimental-strip-types --test test/security-regression.test.mjs test/security-integration.test.mjs test/batch3-regression.test.mjs test/google-billing-regression.test.mjs test/auth-session-regression.test.mjs test/business-verification.test.mjs test/business-onboarding-legacy.test.mjs test/business-verification-firestore-values.test.mjs test/email-delivery-regression.test.mjs",
+    "test:security": "node --experimental-strip-types --test test/security-regression.test.mjs test/security-integration.test.mjs test/batch3-regression.test.mjs test/google-billing-regression.test.mjs test/auth-session-regression.test.mjs test/business-verification.test.mjs test/business-onboarding-legacy.test.mjs test/business-onboarding-progress.test.mjs test/business-verification-firestore-values.test.mjs test/email-delivery-regression.test.mjs",
     "test:firestore-rules": "firebase emulators:exec --only firestore --project demo-nanoware-ai \"node --test test/firestore-rules.test.mjs\"",
     "test:roadmap": "node --test test/roadmap-foundation.test.mjs test/roadmap-domain-foundation.test.mjs test/roadmap-operations-foundation.test.mjs test/roadmap-release-voice.test.mjs",
     "clean": "next clean"

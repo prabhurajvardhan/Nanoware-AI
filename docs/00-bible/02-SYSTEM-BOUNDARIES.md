@@ -6,7 +6,7 @@
 
 ## Verified boundary
 
-The repository contains a Next.js App Router web application. Browser code uses Firebase Auth/Firestore; server code uses route handlers, server actions, Firebase Admin, and Resend helpers. `middleware.ts` gates selected paths using an `authToken` cookie. No provider deployment manifest was found.
+The repository contains a Next.js App Router web application. Browser code uses Firebase Auth/Firestore; server code uses route handlers, server actions, Firebase Admin, and a server-only Nodemailer SMTP adapter. `middleware.ts` gates selected paths using an `authToken` cookie. No provider deployment manifest was found.
 
 ## Proposed boundary
 

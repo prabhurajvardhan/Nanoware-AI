@@ -1,23 +1,26 @@
 'use server';
 
-import { getResendClient } from './client';
-import { sendEmailWithResend, type EmailDeliveryResult } from './delivery';
+import { sendEmailWithTransport, type EmailDeliveryResult } from './delivery';
+import { getSmtpTransport } from './transport';
+import { readSmtpConfiguration } from './smtp-config';
 import * as templates from './templates';
 
 const getAdminAddress = () => process.env.ADMIN_EMAIL || 'admin@nanoware.ai';
 const getAppUrl = () => process.env.APP_URL || 'http://localhost:3000';
 
 async function sendEmail(to: string, subject: string, html: string): Promise<EmailDeliveryResult> {
-  return sendEmailWithResend(
-    (payload) => getResendClient().emails.send(payload),
+  const smtpConfiguration = readSmtpConfiguration();
+  return sendEmailWithTransport(
+    smtpConfiguration ? getSmtpTransport() : null,
     process.env.EMAIL_FROM,
+    smtpConfiguration?.user,
     { to, subject, html },
   );
 }
 
-function actionFailure(context: string) {
-  // Context is a fixed internal label; never log exceptions, recipients, tokens, or message content.
-  console.error(`Email helper failed before confirmed delivery: ${context}`);
+function actionFailure() {
+  // Log only a fixed category; never include exceptions, credentials, recipients, tokens, or message content.
+  console.error('Email helper failed:', { category: 'EMAIL_DELIVERY_UNCONFIRMED' });
   return { success: false as const, error: 'EMAIL_DELIVERY_UNCONFIRMED' as const };
 }
 
@@ -34,7 +37,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
     if (!admin.success) return admin;
     return { success: true as const, data: delivery.data };
   } catch {
-    return actionFailure('welcome');
+    return actionFailure();
   }
 }
 
@@ -42,7 +45,7 @@ export async function sendAuthEmail(to: string, title: string, message: string, 
   try {
     return await sendEmail(to, title, templates.authEmailTemplate(title, message, code));
   } catch {
-    return actionFailure('authentication');
+    return actionFailure();
   }
 }
 
@@ -64,7 +67,7 @@ export async function sendRevenueReportEmail(to: string, name: string, loss: num
     if (!admin.success) return admin;
     return { success: true as const, data: delivery.data };
   } catch {
-    return actionFailure('revenue-report');
+    return actionFailure();
   }
 }
 
@@ -72,7 +75,7 @@ export async function sendWelcomeBackEmail(to: string, name: string) {
   try {
     return await sendEmail(to, 'Welcome Back to Nanoware AI', templates.welcomeBackEmailTemplate(name, getAppUrl()));
   } catch {
-    return actionFailure('welcome-back');
+    return actionFailure();
   }
 }
 
@@ -89,7 +92,7 @@ export async function sendRequestAcceptedEmail(to: string, name: string, service
     if (!admin.success) return admin;
     return { success: true as const, data: delivery.data };
   } catch {
-    return actionFailure('request-accepted');
+    return actionFailure();
   }
 }
 
@@ -105,7 +108,7 @@ export async function sendSolutionRequestEmails(userEmail: string, userName: str
     if (!admin.success) return admin;
     return { success: true as const };
   } catch {
-    return actionFailure('solution-request');
+    return actionFailure();
   }
 }
 
@@ -133,7 +136,7 @@ export async function sendPaymentEmail(to: string, type: 'success' | 'failed' | 
     if (!admin.success) return admin;
     return { success: true as const, data: delivery.data };
   } catch {
-    return actionFailure('payment');
+    return actionFailure();
   }
 }
 
@@ -146,7 +149,7 @@ export async function sendAdminOtpEmail(to: string, code: string) {
     );
     return await sendEmail(to, 'Nanoware Admin Login Verification Code', html);
   } catch {
-    return actionFailure('admin-otp');
+    return actionFailure();
   }
 }
 
@@ -154,7 +157,7 @@ export async function sendAccountEmailVerificationEmail(to: string, name: string
   try {
     return await sendEmail(to, 'Verify your Nanoware AI email address', templates.accountEmailVerificationTemplate(name, verifyUrl));
   } catch {
-    return actionFailure('account-verification');
+    return actionFailure();
   }
 }
 
@@ -162,7 +165,7 @@ export async function sendBusinessDomainEmailVerificationEmail(to: string, name:
   try {
     return await sendEmail(to, 'Verify your business email domain - Nanoware AI', templates.businessDomainEmailVerificationTemplate(name, verifyUrl));
   } catch {
-    return actionFailure('business-domain-verification');
+    return actionFailure();
   }
 }
 
@@ -170,7 +173,7 @@ export async function sendAdminNotification(title: string, eventType: string, su
   try {
     return await sendEmail(getAdminAddress(), `[SYSTEM] ${title}`, templates.adminNotificationTemplate(title, eventType, summary, metadata, getAppUrl()));
   } catch {
-    return actionFailure('admin-notification');
+    return actionFailure();
   }
 }
 
@@ -186,6 +189,6 @@ export async function sendBusinessVerificationStatusEmail(to: string, name: stri
     }[status];
     return await sendEmail(to, subject, templates.businessVerificationStatusTemplate({ name, status, reason, url: getAppUrl() }));
   } catch {
-    return actionFailure('business-status');
+    return actionFailure();
   }
 }

@@ -29,8 +29,8 @@ export async function POST() {
       () => invalidateEmailVerificationToken(issued.token, session.uid),
     );
     if (!attempt.success) {
-      if (!attempt.tokenInvalidated) console.error('Account email verification token cleanup incomplete:', requestId);
-      console.error('Account email verification delivery unavailable:', requestId);
+      if (!attempt.tokenInvalidated) console.error('Account email verification token cleanup incomplete.');
+      console.error('Account email verification delivery unavailable.');
       return NextResponse.json({ error: 'Email delivery is temporarily unavailable. Please try again later.', requestId }, { status: 503 });
     }
     return NextResponse.json({ success: true, expiresAt: issued.expiresAt });
@@ -38,7 +38,7 @@ export async function POST() {
     if (error instanceof AuthBoundaryError) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
     if (error instanceof EmailVerificationError && error.code === 'RATE_LIMITED') return NextResponse.json({ error: 'Please wait before requesting another email.' }, { status: 429 });
     if (error instanceof EmailVerificationError && error.code === 'TOKEN_USED') return NextResponse.json({ error: 'This email is already verified.' }, { status: 409 });
-    console.error('Account email verification request failed:', requestId);
+    console.error('Account email verification request failed.');
     return NextResponse.json({ error: 'Unable to send the verification email.', requestId }, { status: 500 });
   }
 }

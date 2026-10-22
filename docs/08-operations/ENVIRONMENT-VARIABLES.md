@@ -8,9 +8,13 @@
 |---|---|---|
 | `GEMINI_API_KEY` | `.env.example`; intended AI provider key | Server only; provider unverified |
 | `APP_URL` | `.env.example` and email links; must be an absolute HTTPS origin in production | Server/config |
-| `RESEND_API_KEY` | Resend client | Server only |
+| `SMTP_HOST` | SMTP endpoint; defaults to the Zoho India host configured in code | Server only |
+| `SMTP_PORT` | SMTP port; defaults to implicit SSL port 465 | Server only |
+| `SMTP_SECURE` | Optional explicit TLS/SSL mode; otherwise inferred from port 465 | Server/config |
+| `SMTP_USER` | Authenticated Zoho mailbox username | Server secret only |
+| `SMTP_PASS` | SMTP password or Zoho app-specific password | Server secret only |
 | `ADMIN_EMAIL` | Admin notification recipient | Server/config |
-| `EMAIL_FROM` | Used by email actions; must be a sender identity/domain verified in Resend | Server/config |
+| `EMAIL_FROM` | Sender mailbox or Zoho-configured sender alias | Server/config |
 | `SMS_PROVIDER` | Optional shared phone-verification integration; not required for business onboarding | Server/config |
 | `TWILIO_ACCOUNT_SID` | Optional Twilio SMS account identifier for phone features outside onboarding | Server secret only |
 | `TWILIO_AUTH_TOKEN` | Optional Twilio SMS credential for phone features outside onboarding | Server secret only |
@@ -22,9 +26,11 @@ Vercel does not provide Google Application Default Credentials to this server ru
 
 Values are not reproduced here. Confirm every runtime variable, secret manager, rotation policy, and environment separation before deployment.
 
-## Email verification incident finding
+## Email delivery and policy note
 
-The previous implementation did not send an account-verification message at all: signup sent a welcome email, used a fallback `hello@nanowareai.in` sender when `EMAIL_FROM` was absent, and swallowed delivery failures in the browser. Resend requires both a valid API key and a sender identity/domain verified in the Resend project. The repaired flow requires explicit `EMAIL_FROM`, sends a single-use 30-minute link, logs only a non-sensitive delivery failure, and exposes a retryable UI state. No production Resend delivery logs were available in this repository, so provider-level rejection codes must still be confirmed in the Resend dashboard after deployment.
+Email is sent through a non-pooled Nodemailer SMTP transport. The transport requires `SMTP_USER`, `SMTP_PASS`, and `EMAIL_FROM`; absent or malformed configuration fails closed. Successful delivery requires a nonempty SMTP message ID, acceptance of the target recipient, and no rejected recipients. Authentication and connection errors are logged only with safe protocol codes.
+
+Zoho states that exact SMTP server details depend on account type and data center; verify the host in Zoho Mail's Server Configuration Details before deployment. Zoho's published Mail usage policy lists automated and transactional email, bulk mail, marketing mail, and newsletters as unsupported. The SMTP transport switch does not establish provider approval for those use cases. Use a Zoho product explicitly designed for transactional or campaign delivery, or obtain written confirmation for the intended workload.
 
 Business onboarding does not require SMS or Twilio configuration. Shared phone-verification utilities remain fail-closed when used by other features: absent provider configuration never marks a phone verified. The supported phone countries remain India (`+91`), United States (`+1`), Canada (`+1`), Australia (`+61`), and United Kingdom (`+44`); a configured Twilio account that rejects a request returns a safe provider-failure message.
 

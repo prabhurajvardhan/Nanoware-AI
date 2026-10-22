@@ -5,7 +5,7 @@
 - **Last updated:** 2026-10-13
 
 ## Current verified architecture
-Next.js App Router serves UI and route handlers. Firebase client SDK is used in browser components; Firebase Admin is used in server helpers/actions. Resend is used by email helpers. The audit pipeline fetches and parses external websites. Persistence is split: current audit route is process memory while an Admin helper targets Firestore.
+Next.js App Router serves UI and route handlers. Firebase client SDK is used in browser components; Firebase Admin is used in server helpers/actions. Email actions use a server-only Nodemailer SMTP transport with strict recipient-acceptance confirmation and bounded timeouts. The audit pipeline fetches and parses external websites. Persistence is split: current audit route is process memory while an Admin helper targets Firestore.
 
 ## Proposed target
 ```text

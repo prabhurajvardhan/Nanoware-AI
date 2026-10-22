@@ -11,6 +11,7 @@ import {
 } from './verification';
 import { invalidateDomainEmailTokens } from './domain-email-verification';
 import { buildInitialBusinessWritePayloads, stripUndefinedFirestoreValues } from './firestore-values';
+import { projectOnboardingProgress } from './onboarding-progress';
 export { stripUndefinedFirestoreValues } from './firestore-values';
 
 export const BUSINESS_ROLES = ['owner', 'admin', 'member'] as const;
@@ -98,6 +99,30 @@ export async function requireVerifiedBusinessMembership(userId: string, business
   const business = await requireBusinessMembership(userId, businessId, roles);
   if (business.verificationStatus !== 'verified') throw new BusinessAccessError('BUSINESS_PENDING_VERIFICATION');
   return business;
+}
+
+export async function getBusinessOnboardingProgress(userId: string) {
+  const db = getAdminDb();
+  const businessId = `business_${userId}`;
+  const membershipRef = db.collection('memberships').doc(membershipId(businessId, userId));
+  const businessRef = db.collection('businesses').doc(businessId);
+  const [membershipDoc, businessDoc] = await Promise.all([membershipRef.get(), businessRef.get()]);
+  if (!membershipDoc.exists || !businessDoc.exists) return null;
+
+  const membership = membershipDoc.data() || {};
+  const business = businessDoc.data() || {};
+  if (business.ownerId !== userId) return null;
+  const tokens = await db.collection('business_domain_email_tokens').where('uid', '==', userId).get();
+  return projectOnboardingProgress({
+    userId,
+    businessId,
+    ownerId: business.ownerId,
+    membershipUserId: membership.userId,
+    membershipRole: membership.role,
+    membershipStatus: membership.status,
+    business,
+    domainEmailTokens: tokens.docs.map((doc) => doc.data()),
+  });
 }
 
 function slugify(name: string) {

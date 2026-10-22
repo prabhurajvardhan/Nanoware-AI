@@ -14,7 +14,9 @@ export async function POST(request: NextRequest) {
     if (!canManageBilling(actor.role)) return NextResponse.json({ error: 'Only business owners and admins may manage billing.' }, { status: 403 });
     const { planId } = body;
     const plan = typeof planId === 'string' ? getBillingPlan(planId) : null;
+    if (plan?.customSales) return NextResponse.json({ error: 'Daken² uses a custom sales enquiry and has no fixed-price checkout.' }, { status: 400 });
     if (!plan?.priceId) return NextResponse.json({ error: 'This plan is not configured for checkout.' }, { status: 400 });
+    if (!plan.checkoutEnabled) return NextResponse.json({ error: 'Checkout is not enabled for this plan. Complete the required feature and billing checks before launch.' }, { status: 400 });
     const db = getAdminDb();
     const businessRef = db.collection('businesses').doc(actor.businessId);
     const businessSnapshot = await businessRef.get();

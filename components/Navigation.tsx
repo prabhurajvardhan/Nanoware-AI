@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { Logo } from './Logo';
 import { useAuth } from '@/components/AuthProvider';
+import { ModeSwitcher } from '@/components/ModeSwitcher';
 
 const navLinks = [
   { href: '/services', label: 'Services' },
@@ -48,8 +49,8 @@ export function Navigation() {
             </span>
           </Link>
 
-          <nav className="hidden lg:flex items-center gap-8">
-            {navLinks.map((link) => (
+          <nav className={clsx('hidden lg:flex items-center gap-8', user && 'flex-1 justify-center')}>
+            {user ? <ModeSwitcher userId={user.uid} /> : navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -136,6 +137,7 @@ export function Navigation() {
             </div>
 
             <nav className="flex flex-col gap-6 text-xl font-heading font-medium">
+              {user && <div className="self-start"><ModeSwitcher userId={user.uid} onNavigate={() => setMobileMenuOpen(false)} /></div>}
               {navLinks.map((link) => (
                 <Link
                   key={link.href}

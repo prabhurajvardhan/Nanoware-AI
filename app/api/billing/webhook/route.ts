@@ -56,9 +56,11 @@ export async function POST(request: NextRequest) {
           const session = object as Stripe.Checkout.Session;
           update.stripeCustomerId = typeof session.customer === 'string' ? session.customer : session.customer?.id || null;
           update.checkoutCompleted = true;
+          if (session.metadata?.planId) update.planId = session.metadata.planId;
         } else if (event.type.startsWith('customer.subscription.')) {
           const subscription = object as Stripe.Subscription;
           update.state = stateForSubscription(subscription.status);
+          if (subscription.metadata?.planId) update.planId = subscription.metadata.planId;
           update.stripeSubscriptionId = subscription.id;
           update.stripeCustomerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id || null;
           update.currentPeriodEnd = new Date(subscription.items.data[0]?.current_period_end ? subscription.items.data[0].current_period_end * 1000 : Date.now()).toISOString();

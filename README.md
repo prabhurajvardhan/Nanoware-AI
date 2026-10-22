@@ -26,6 +26,8 @@ The implementation-ready product, architecture, audit, task, testing, and operat
 
 The current application is documented separately from the proposed multi-tenant SaaS target. Documentation uses VERIFIED, INFERRED, UNVERIFIED, and PROPOSED evidence labels.
 
+The current User Mode, Client Mode, trial, and billing implementation status is documented in the [Batch 4 implementation report](docs/BATCH-4-IMPLEMENTATION-REPORT.md), including verified checks and external blockers.
+
 ## Authentication and billing setup
 
 ### Firebase Google Sign-In
@@ -34,7 +36,7 @@ In Firebase Console, open **Authentication → Sign-in method**, enable **Google
 
 ### Stripe test mode
 
-Create test-mode Products and recurring Prices in Stripe, then set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_STARTER_PRICE_ID`, `STRIPE_PRO_PRICE_ID`, and `APP_URL` in the server environment. The application never accepts a price ID, plan price, business ID, role, or subscription status as authoritative client input.
+Create test-mode Products and recurring Prices in Stripe, then set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_DAKEN_PRICE_ID`, `STRIPE_DAKEN_PLUS_PRICE_ID`, `DAKEN_CHECKOUT_ENABLED`, `DAKEN_PLUS_CHECKOUT_ENABLED`, and `APP_URL` in the server environment. Keep the rollout flags false until included features and billing entitlements pass launch review. Daken² uses a custom sales enquiry and has no fixed-price checkout. The application never accepts a price ID, plan price, business ID, role, or subscription status as authoritative client input.
 
 Configure a Stripe webhook endpoint at `${APP_URL}/api/billing/webhook` for `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, and `invoice.payment_failed`. Enable the Stripe Customer Portal in test mode if customers should manage payment methods and invoices. Subscription access is granted only for provider-verified `active` or `trialing` state; `past_due`, cancelled, and expired states do not grant paid-tool access.
 
@@ -53,3 +55,12 @@ The merged production deployment was confirmed through GitHub’s Vercel deploym
 Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and `EMAIL_FROM` as server-only Vercel environment variables. `SMTP_PASS` should be an app-specific password when Zoho account security requires one. `EMAIL_FROM` must be the authenticated mailbox or a sender alias configured and verified in Zoho Mail; a differing address produces a safe warning code and may be rejected by Zoho if it is not an allowed alias. The application defaults to the Zoho India SMTP host requested for this account and uses SSL on the default port; check the Server Configuration Details in the Zoho account before deployment because Zoho says endpoints can vary by account and data center. Never expose these variables with a `NEXT_PUBLIC_` prefix or commit their values.
 
 **Provider policy warning:** although this application can route its existing messages through SMTP, Zoho's published Mail usage policy lists automated and transactional email, bulk mail, marketing mail, and newsletters as unsupported. Confirm the intended operational workload is permitted before enabling this transport in production. Do not build announcements on this SMTP account; use a dedicated campaign product for opted-in announcements and a transactional-email product for verification, OTP, and other automated messages.
+
+
+## Daken plan configuration
+
+The configured catalogue is Daken ($9 USD/month: 2 GB storage, 2,000,000 monthly tokens, unlimited bookings), Daken+ ($19 USD/month: 5 GB storage, 5,000,000 monthly tokens, unlimited bookings), and Daken² (custom pricing and negotiated allowances). The first two remain unavailable for checkout until matching Stripe Price IDs are set and their explicit server-side rollout flags are enabled after feature-readiness checks. Daken² deliberately has no fixed-price Stripe checkout; customers submit a sales enquiry through Client Mode. Legacy Starter/Pro plan identifiers remain hidden from new sales but available for existing subscription reconciliation.
+
+A one-time seven-day trial is created server-side for an eligible business owner and is not reset by creating another owned workspace. Existing business verification gates remain in effect. Trial start/expiry is persisted; the trial is denied access to workspace operations after expiry, while records are retained and the billing/upgrade path remains accessible.
+
+The current repository does not make AI model calls or persist provider-reported token usage, and it has no atomic storage meter. The application must not claim that token or storage consumption is tracked until those provider and persistence paths are implemented; the User Mode dashboard marks the metrics unavailable rather than estimating them.

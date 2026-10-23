@@ -40,6 +40,8 @@ Create matching monthly Daken and Daken+ Plans in Razorpay test mode, then set `
 
 Configure a Razorpay Subscriptions webhook at `${APP_URL}/api/billing/webhook` and set its secret as `RAZORPAY_WEBHOOK_SECRET`. Enable the subscription events `subscription.authenticated`, `subscription.activated`, `subscription.charged`, `subscription.completed`, `subscription.updated`, `subscription.pending`, `subscription.halted`, `subscription.paused`, `subscription.resumed`, and `subscription.cancelled`. Access is granted only after a valid signed event reports an `active` subscription; pending, authenticated, halted, cancelled, completed, expired, and unknown states do not grant paid-tool access. Owners/admins can request cancellation at the end of the current billing cycle from Billing settings.
 
+See Razorpay's official guides for [creating subscriptions](https://razorpay.com/docs/payments/subscriptions/create/), [webhook signature validation](https://razorpay.com/docs/webhooks/validate-test/), [subscription webhook events](https://razorpay.com/docs/webhooks/subscriptions/), and [subscription cancellation](https://razorpay.com/docs/api/payments/subscriptions/cancel-subscription/).
+
 The customer is redirected to the Razorpay subscription authorisation link. Redirects do not grant entitlements; only the signed, deduplicated webhook updates subscription state. No live credentials, production configuration, deployment, or merge is performed by this change.
 
 ### Production Firebase Admin requirement

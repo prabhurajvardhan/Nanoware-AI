@@ -35,9 +35,11 @@ export type BusinessMembership = {
   role: BusinessRole;
   status: 'active';
   businessName: string;
+  timezone: string;
   businessStatus: string;
   verificationStatus: VerificationStatus;
   subscriptionState: string | null;
+  subscriptionPlanId: string | null;
 };
 
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
@@ -62,9 +64,11 @@ function businessSummary(businessId: string, data: FirebaseFirestore.DocumentDat
     role: membership.role,
     status: 'active',
     businessName: typeof data.name === 'string' ? data.name : 'Business',
+    timezone: typeof data.timezone === 'string' ? data.timezone : 'UTC',
     businessStatus: typeof data.status === 'string' ? data.status : 'active',
     verificationStatus: verificationStatus(data),
     subscriptionState: typeof data.subscription?.state === 'string' ? data.subscription.state : null,
+    subscriptionPlanId: typeof data.subscription?.planId === 'string' ? data.subscription.planId : null,
   };
 }
 

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "test:security": "node --experimental-strip-types --test test/security-regression.test.mjs test/security-integration.test.mjs test/batch3-regression.test.mjs test/google-billing-regression.test.mjs test/auth-session-regression.test.mjs test/business-verification.test.mjs test/business-onboarding-legacy.test.mjs test/business-onboarding-progress.test.mjs test/business-verification-firestore-values.test.mjs test/email-delivery-regression.test.mjs",
+    "test:workspace": "node --experimental-strip-types --test test/workspace-records.test.mjs test/workspace-api-regression.test.mjs test/trial-entitlements.test.mjs",
     "test:firestore-rules": "firebase emulators:exec --only firestore --project demo-nanoware-ai \"node --test test/firestore-rules.test.mjs\"",
     "test:roadmap": "node --test test/roadmap-foundation.test.mjs test/roadmap-domain-foundation.test.mjs test/roadmap-operations-foundation.test.mjs test/roadmap-release-voice.test.mjs",
     "clean": "next clean"
@@ -36,7 +37,6 @@
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-hook-form": "^7.74.0",
-    "stripe": "^18.5.0",
     "tailwind-merge": "^3.3.1",
     "three": "^0.184.0",
     "three-stdlib": "^2.36.1",

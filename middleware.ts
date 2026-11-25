@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+export function safeLoginRedirect(value: string | null) {
+  return value && value.startsWith('/') && !value.startsWith('//') ? value : '/dashboard';
+}
+
 export function middleware(request: NextRequest) {
   // Presence only provides UX routing. Protected server operations must verify
   // this HttpOnly Firebase session cookie with the Admin SDK.
@@ -18,7 +22,7 @@ export function middleware(request: NextRequest) {
 
   // Redirect to dashboard if logged in and trying to access login page
   if (sessionCookie && request.nextUrl.pathname === '/login') {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return NextResponse.redirect(new URL(safeLoginRedirect(request.nextUrl.searchParams.get('redirect')), request.url));
   }
 
   return NextResponse.next();

@@ -8,6 +8,9 @@ const adminSource = fs.readFileSync(new URL('../lib/firebase-admin.ts', import.m
 const sessionSource = fs.readFileSync(new URL('../app/api/auth/session/route.ts', import.meta.url), 'utf8');
 const providerSource = fs.readFileSync(new URL('../components/AuthProvider.tsx', import.meta.url), 'utf8');
 const loginSource = fs.readFileSync(new URL('../app/login/page.tsx', import.meta.url), 'utf8');
+const middlewareSource = fs.readFileSync(new URL('../middleware.ts', import.meta.url), 'utf8');
+const projectsSource = fs.readFileSync(new URL('../lib/projectsData.ts', import.meta.url), 'utf8');
+const sessionRouteSource = fs.readFileSync(new URL('../app/api/auth/session/route.ts', import.meta.url), 'utf8');
 const firebaseConfig = JSON.parse(fs.readFileSync(new URL('../firebase-applet-config.json', import.meta.url), 'utf8'));
 const { sanitizeSessionDiagnostic, sessionErrorDetails } = await import('../lib/auth/session-diagnostics.ts');
 
@@ -75,6 +78,20 @@ test('Google login clears stale errors, preserves session failures, and routes o
   assert.match(loginSource, /if \(serverMessage\) throw new Error\(serverMessage\)/);
   assert.match(loginSource, /setError\('\'\);\s*if \(isNewUser\)/);
   assert.match(loginSource, /router\.push\(access\.onboardingRequired \? '\/businesses\/onboarding' : redirectPath\)/);
+});
+
+test('signed-in OAuth connector requests keep their authorization continuation', () => {
+  assert.match(middlewareSource, /export function safeLoginRedirect\(value: string \| null\)/);
+  assert.ok(middlewareSource.includes("value.startsWith('/') && !value.startsWith('//')"));
+  assert.match(middlewareSource, /searchParams\.get\('redirect'\)/);
+  assert.doesNotMatch(middlewareSource, /new URL\('\/dashboard', request\.url\)/);
+});
+
+test('Photon is a single external project card and production sessions span nanowareai.in subdomains', () => {
+  assert.equal((projectsSource.match(/id: 'photon'/g) || []).length, 1);
+  assert.match(projectsSource, /name: 'Photon'/);
+  assert.match(projectsSource, /url: 'https:\/\/mcp\.nanowareai\.in\/photon'/);
+  assert.match(sessionRouteSource, /domain: process\.env\.NODE_ENV === 'production' \? '\.nanowareai\.in' : undefined/);
 });
 
 // Import-boundary regression: the session route must not load Firebase Admin while its module is evaluated.

@@ -52,5 +52,15 @@ export const projectsData = [
       { title: 'The Concept', content: 'Users engineer custom AI models with specific system prompts, creating distinct personas and behaviors (similar to custom GPTs/Gems).' },
       { title: 'AI Social Media', content: 'Instead of existing in isolated chat windows, these user-generated personas gather in a shared digital space ("The System Prompt"). They interact autonomously, comment, form bonds, and form an unpredictable, AI-driven social network governed by their seeded prompts.' }
     ]
+  },
+  {
+    id: 'photon',
+    name: 'Photon',
+    status: 'Available',
+    description: 'A local-first Python code patch engine and authenticated remote MCP service by Nanoware AI.',
+    url: 'https://mcp.nanowareai.in/photon',
+    details: [
+      { title: 'Photon MCP', content: 'Connect Claude, ChatGPT, or another MCP client to Photon for metered Python and TypeScript compiler-error patches.' }
+    ]
   }
 ];

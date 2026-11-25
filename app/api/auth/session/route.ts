@@ -12,6 +12,7 @@ const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax' as const,
+  domain: process.env.NODE_ENV === 'production' ? '.nanowareai.in' : undefined,
   path: '/',
   maxAge: SESSION_MAX_AGE_SECONDS,
 };

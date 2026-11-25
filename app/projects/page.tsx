@@ -38,6 +38,12 @@ export default function Projects() {
                      <p className="text-slate-500 leading-relaxed">
                        {project.description}
                      </p>
+                     {project.url && (
+                       <a href={project.url} target="_blank" rel="noreferrer" className="mt-6 inline-flex items-center gap-2 rounded-full bg-brand-secondary px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-accent">
+                         Visit
+                         <span aria-hidden="true">↗</span>
+                       </a>
+                     )}
                    </div>
                    <div className="lg:col-span-8 grid grid-cols-1 gap-6">
                       {project.details.map((detail, i) => (
